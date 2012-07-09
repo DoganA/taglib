@@ -23,7 +23,7 @@
  *   http://www.mozilla.org/MPL/                                           *
  ***************************************************************************/
 
-#ifndef HAVE_ZLIB
+#ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
 
@@ -67,7 +67,7 @@ public:
   }
 };
 
-FrameFactory *FrameFactory::factory = 0;
+FrameFactory FrameFactory::factory;
 
 ////////////////////////////////////////////////////////////////////////////////
 // public members
@@ -75,9 +75,7 @@ FrameFactory *FrameFactory::factory = 0;
 
 FrameFactory *FrameFactory::instance()
 {
-  if(!factory)
-    factory = new FrameFactory;
-  return factory;
+  return &factory;
 }
 
 Frame *FrameFactory::createFrame(const ByteVector &data, bool synchSafeInts) const
@@ -187,13 +185,13 @@ Frame *FrameFactory::createFrame(const ByteVector &origData, Header *tagHeader) 
 
   // ID3v2.2 Attached Picture
 
-	if(frameID == "PIC") {
+  if(frameID == "PIC") {
     AttachedPictureFrame *f = new AttachedPictureFrameV22(data, header);
     d->setTextEncoding(f);
     return f;
   }
 
-	// Relative Volume Adjustment (frames 4.11)
+  // Relative Volume Adjustment (frames 4.11)
 
   if(frameID == "RVA2")
     return new RelativeVolumeFrame(data, header);
@@ -366,13 +364,6 @@ bool FrameFactory::updateFrame(Frame::Header *header) const
       handled = true;
     }
 
-    /* If we didn't manage to discard the header OR convert it,
-     * then convert it mechanically, just to avoid corrupting
-     * the ID3 header as a whole */
-    if (!handled) {
-      char oldFrameType[4];
-      char newFrameType[5];
-
       memcpy (oldFrameType, header->frameID().data(), 3);
       oldFrameType[3] = 0;
 
@@ -401,6 +392,7 @@ bool FrameFactory::updateFrame(Frame::Header *header) const
 
     convertFrame("TORY", "TDOR", header);
     convertFrame("TYER", "TDRC", header);
+    convertFrame("IPLS", "TIPL", header);
 
     break;
   }

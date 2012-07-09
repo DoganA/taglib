@@ -23,8 +23,6 @@
 #include "config.h"
 #endif
 
-#include "tag_c.h"
-
 #include <stdlib.h>
 #include <fileref.h>
 #include <tfile.h>
@@ -42,6 +40,8 @@
 #include <string.h>
 #include <id3v2framefactory.h>
 
+#include "tag_c.h"
+
 using namespace TagLib;
 
 static List<char *> strings;
@@ -56,6 +56,11 @@ void taglib_set_strings_unicode(BOOL unicode)
 void taglib_set_string_management_enabled(BOOL management)
 {
   stringManagementEnabled = bool(management);
+}
+
+void taglib_free(void* pointer)
+{
+  free(pointer);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -86,14 +91,10 @@ TagLib_File *taglib_file_new_type(const char *filename, TagLib_File_Type type)
     return reinterpret_cast<TagLib_File *>(new Ogg::Speex::File(filename));
   case TagLib_File_TrueAudio:
     return reinterpret_cast<TagLib_File *>(new TrueAudio::File(filename));
-#ifdef TAGLIB_WITH_MP4
   case TagLib_File_MP4:
     return reinterpret_cast<TagLib_File *>(new MP4::File(filename));
-#endif
-#ifdef TAGLIB_WITH_ASF
   case TagLib_File_ASF:
     return reinterpret_cast<TagLib_File *>(new ASF::File(filename));
-#endif
   default:
     return 0;
   }

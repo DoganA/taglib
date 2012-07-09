@@ -20,6 +20,10 @@ INCLUDE_DIRECTORIES(
   ${CMAKE_CURRENT_SOURCE_DIR}/../taglib/ogg/flac
   ${CMAKE_CURRENT_SOURCE_DIR}/../taglib/flac
   ${CMAKE_CURRENT_SOURCE_DIR}/../taglib/wavpack
+  ${CMAKE_CURRENT_SOURCE_DIR}/../taglib/mod
+  ${CMAKE_CURRENT_SOURCE_DIR}/../taglib/s3m
+  ${CMAKE_CURRENT_SOURCE_DIR}/../taglib/it
+  ${CMAKE_CURRENT_SOURCE_DIR}/../taglib/xm
 )
 
 SET(test_runner_SRCS
@@ -31,6 +35,7 @@ SET(test_runner_SRCS
   test_trueaudio.cpp
   test_bytevector.cpp
   test_bytevectorlist.cpp
+  test_bytevectorstream.cpp
   test_string.cpp
   test_fileref.cpp
   test_id3v1.cpp
@@ -47,18 +52,15 @@ SET(test_runner_SRCS
   test_apetag.cpp
   test_wav.cpp
   test_wavpack.cpp
+  test_mp4.cpp
+  test_mp4item.cpp
+  test_mp4coverart.cpp
+  test_asf.cpp
+  test_mod.cpp
+  test_s3m.cpp
+  test_it.cpp
+  test_xm.cpp
 )
-IF(WITH_MP4)
-   SET(test_runner_SRCS ${test_runner_SRCS}
-     test_mp4.cpp
-     test_mp4item.cpp
-     test_mp4coverart.cpp
-   )
-ENDIF(WITH_MP4)
-
-IF(WITH_ASF)
-   SET(test_runner_SRCS ${test_runner_SRCS} test_asf.cpp)
-ENDIF(WITH_ASF)
 
 ADD_EXECUTABLE(test_runner ${test_runner_SRCS})
 TARGET_LINK_LIBRARIES(test_runner tag ${CPPUNIT_LIBRARIES})
@@ -67,5 +69,4 @@ ADD_CUSTOM_TARGET(check
     ./test_runner
     DEPENDS test_runner
 )
-
 endif(BUILD_TESTS)

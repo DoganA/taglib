@@ -20,14 +20,14 @@ public:
 
   void testLength()
   {
-    RIFF::WAV::File f("data/empty.wav");
+    RIFF::WAV::File f(TEST_FILE_PATH_C("empty.wav"));
     CPPUNIT_ASSERT_EQUAL(true, f.isValid());
     CPPUNIT_ASSERT_EQUAL(3, f.audioProperties()->length());
   }
 
   void testZeroSizeDataChunk()
   {
-    RIFF::WAV::File f("data/zero-size-chunk.wav");
+    RIFF::WAV::File f(TEST_FILE_PATH_C("zero-size-chunk.wav"));
     CPPUNIT_ASSERT_EQUAL(false, f.isValid());
   }
 

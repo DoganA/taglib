@@ -26,6 +26,7 @@
 #include "tstring.h"
 #include "unicode.h"
 #include "tdebug.h"
+#include "tstringlist.h"
 
 #include <iostream>
 
@@ -307,6 +308,26 @@ int String::rfind(const String &s, int offset) const
     return -1;
 }
 
+StringList String::split(const String &separator) const
+{
+  StringList list;
+  for(int index = 0;;)
+  {
+    int sep = find(separator, index);
+    if(sep < 0)
+    {
+      list.append(substr(index, size() - index));
+      break;
+    }
+    else
+    {
+      list.append(substr(index, sep - index));
+      index = sep + separator.size();
+    }
+  }
+  return list;
+}
+
 bool String::startsWith(const String &s) const
 {
   if(s.length() > length())
@@ -570,6 +591,11 @@ const TagLib::wchar &String::operator[](int i) const
 bool String::operator==(const String &s) const
 {
   return d == s.d || d->data == s.d->data;
+}
+
+bool String::operator!=(const String &s) const
+{
+  return !operator==(s);
 }
 
 String &String::operator+=(const String &s)

@@ -26,6 +26,8 @@
 #include <tbytevector.h>
 #include <tdebug.h>
 #include <id3v2tag.h>
+#include <tstringlist.h>
+#include <tpropertymap.h>
 
 #include "wavfile.h"
 
@@ -65,6 +67,14 @@ RIFF::WAV::File::File(FileName file, bool readProperties,
     read(readProperties, propertiesStyle);
 }
 
+RIFF::WAV::File::File(IOStream *stream, bool readProperties,
+                       Properties::ReadStyle propertiesStyle) : RIFF::File(stream, LittleEndian)
+{
+  d = new FilePrivate;
+  if(isOpen())
+    read(readProperties, propertiesStyle);
+}
+
 RIFF::WAV::File::~File()
 {
   delete d;
@@ -74,6 +84,17 @@ ID3v2::Tag *RIFF::WAV::File::tag() const
 {
   return d->tag;
 }
+
+PropertyMap RIFF::WAV::File::properties() const
+{
+  return d->tag->properties();
+}
+
+PropertyMap RIFF::WAV::File::setProperties(const PropertyMap &properties)
+{
+  return d->tag->setProperties(properties);
+}
+
 
 RIFF::WAV::Properties *RIFF::WAV::File::audioProperties() const
 {

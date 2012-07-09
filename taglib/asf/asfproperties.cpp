@@ -27,8 +27,6 @@
 #include <config.h>
 #endif
 
-#ifdef WITH_ASF
-
 #include <tdebug.h>
 #include <tstring.h>
 #include "asfproperties.h"
@@ -38,11 +36,12 @@ using namespace TagLib;
 class ASF::Properties::PropertiesPrivate
 {
 public:
-  PropertiesPrivate(): length(0), bitrate(0), sampleRate(0), channels(0) {}
+  PropertiesPrivate(): length(0), bitrate(0), sampleRate(0), channels(0), encrypted(false) {}
   int length;
   int bitrate;
   int sampleRate;
   int channels;
+  bool encrypted;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -80,6 +79,11 @@ int ASF::Properties::channels() const
   return d->channels;
 } 
 
+bool ASF::Properties::isEncrypted() const
+{
+  return d->encrypted;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // private members
 ////////////////////////////////////////////////////////////////////////////////
@@ -104,4 +108,8 @@ void ASF::Properties::setChannels(int length)
   d->channels = length;
 }
 
-#endif
+void ASF::Properties::setEncrypted(bool encrypted)
+{
+  d->encrypted = encrypted;
+}
+

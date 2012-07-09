@@ -35,6 +35,7 @@
 
 #include "mpegfile.h"
 #include "mpegheader.h"
+#include "tpropertymap.h"
 
 using namespace TagLib;
 
@@ -117,6 +118,16 @@ MPEG::File::File(FileName file, ID3v2::FrameFactory *frameFactory,
   read(readProperties, propertiesStyle);
 }
 
+MPEG::File::File(IOStream *stream, ID3v2::FrameFactory *frameFactory,
+                 bool readProperties, Properties::ReadStyle propertiesStyle) :
+  TagLib::File(stream)
+{
+  d = new FilePrivate(frameFactory);
+
+  if(isOpen())
+    read(readProperties, propertiesStyle);
+}
+
 MPEG::File::~File()
 {
   delete d;
@@ -125,6 +136,40 @@ MPEG::File::~File()
 TagLib::Tag *MPEG::File::tag() const
 {
   return &d->tag;
+}
+
+PropertyMap MPEG::File::properties() const
+{
+  // once Tag::properties() is virtual, this case distinction could actually be done
+  // within TagUnion.
+  if(d->hasID3v2)
+    return d->tag.access<ID3v2::Tag>(ID3v2Index, false)->properties();
+  if(d->hasAPE)
+    return d->tag.access<APE::Tag>(APEIndex, false)->properties();
+  if(d->hasID3v1)
+    return d->tag.access<ID3v1::Tag>(ID3v1Index, false)->properties();
+  return PropertyMap();
+}
+
+void MPEG::File::removeUnsupportedProperties(const StringList &properties)
+{
+  if(d->hasID3v2)
+    d->tag.access<ID3v2::Tag>(ID3v2Index, false)->removeUnsupportedProperties(properties);
+  else if(d->hasAPE)
+    d->tag.access<APE::Tag>(APEIndex, false)->removeUnsupportedProperties(properties);
+  else if(d->hasID3v1)
+    d->tag.access<ID3v1::Tag>(ID3v1Index, false)->removeUnsupportedProperties(properties);
+}
+PropertyMap MPEG::File::setProperties(const PropertyMap &properties)
+{
+  if(d->hasID3v2)
+    return d->tag.access<ID3v2::Tag>(ID3v2Index, false)->setProperties(properties);
+  else if(d->hasAPE)
+    return d->tag.access<APE::Tag>(APEIndex, false)->setProperties(properties);
+  else if(d->hasID3v1)
+    return d->tag.access<ID3v1::Tag>(ID3v1Index, false)->setProperties(properties);
+  else
+    return d->tag.access<ID3v2::Tag>(ID3v2Index, true)->setProperties(properties);
 }
 
 MPEG::Properties *MPEG::File::audioProperties() const
@@ -143,6 +188,11 @@ bool MPEG::File::save(int tags)
 }
 
 bool MPEG::File::save(int tags, bool stripOthers)
+{
+  return save(tags, stripOthers, 4);
+}
+
+bool MPEG::File::save(int tags, bool stripOthers, int id3v2Version)
 {
   if(tags == NoTags && stripOthers)
     return strip(AllTags);
@@ -188,63 +238,18 @@ bool MPEG::File::save(int tags, bool stripOthers)
 
       if(!d->hasID3v2)
         d->ID3v2Location = 0;
+      insert(ID3v2Tag()->render(id3v2Version), d->ID3v2Location, d->ID3v2OriginalSize);
 
-      ByteVector id3data = ID3v2Tag()->render();
-      if (id3data.size() > d->ID3v2OriginalSize) {
-        outfile = this->tempFile();
-        if (!outfile) {
-          debug("ERROR: failed to create temporary file!");
-          return false;
-        }
-        this->seek( 0 );
-        outfile->seek( 0 );
-        for ( ulonglong readIndex = 0; readIndex < d->ID3v2Location; )
-        {
-          ulonglong size = std::min( (ulonglong)4096, d->ID3v2Location - readIndex );
-          ByteVector buffer = this->readBlock(size);
-          outfile->writeBlock(buffer);
-          readIndex += buffer.size();
-        }
-      }
+      d->hasID3v2 = true;
+
+      // v1 tag location has changed, update if it exists
 
       outfile->insert(id3data, d->ID3v2Location, d->ID3v2OriginalSize);
 
       d->hasID3v2 = true;
 
-      if (outfile != this) {
-        // we're using a scratch file (because the tag needed to grow)
-        // copy the old data over (including APE + id3v1 tags; we can
-        // delete it later if necessary, they're near end of file and easy)
-        ulonglong end = this->length();
-        this->seek( d->ID3v2OriginalSize, FileIO::Current );
-        for ( ulonglong readIndex = this->tell(); readIndex < end; )
-        {
-          ulonglong size = std::min( (ulonglong)4096, end - readIndex );
-          ByteVector buffer = this->readBlock(size);
-          outfile->writeBlock(buffer);
-          readIndex += buffer.size();
-        }
-        // things have moved, shift them over
-        long id3v2Difference = id3data.size() - d->ID3v2OriginalSize;
-        if (d->hasID3v1)
-          d->ID3v1Location += id3v2Difference;
-        if (d->hasAPE) {
-          d->APELocation += id3v2Difference;
-          d->APEFooterLocation += id3v2Difference;
-        }
-      }
-    }
-  }
-  else if(d->hasID3v2 && stripOthers) {
-    d->tag.set(ID3v2Index, 0);
-    if(d->ID3v2OriginalSize > 0) {
-      // for efficiency, avoid rewriting the entire file;
-      // replace the original id3v2 tag with all padding instead
-      TagLib::ID3v2::Header header;
-      header.setTagSize(d->ID3v2OriginalSize);
-      ByteVector headerBytes = header.render();
-      headerBytes.append(ByteVector(d->ID3v2OriginalSize - headerBytes.size()));
-      outfile->insert(headerBytes, d->ID3v2Location, d->ID3v2OriginalSize);
+      if(APETag())
+        findAPE();
     }
   }
 
@@ -284,12 +289,13 @@ bool MPEG::File::save(int tags, bool stripOthers)
         d->ID3v1Location += d->APEOriginalSize;
       }
       else {
-        outfile->seek(0, End);
-        d->APELocation = outfile->tell();
+        seek(0, End);
+        d->APELocation = tell();
+        APE::Tag *apeTag = d->tag.access<APE::Tag>(APEIndex, false);
         d->APEFooterLocation = d->APELocation
-          + d->tag.access<APE::Tag>(APEIndex, false)->footer()->completeTagSize()
-          - APE::Footer::size();
-        outfile->writeBlock(APETag()->render());
+                               + apeTag->footer()->completeTagSize()
+                               - APE::Footer::size();
+        writeBlock(APETag()->render());
         d->APEOriginalSize = APETag()->footer()->completeTagSize();
         d->hasAPE = true;
       }
@@ -729,7 +735,7 @@ void MPEG::File::findAPE()
       seek(d->APEFooterLocation);
       APE::Footer footer(readBlock(APE::Footer::size()));
       d->APELocation = d->APEFooterLocation - footer.completeTagSize()
-	+ APE::Footer::size();
+                       + APE::Footer::size();
       return;
     }
   }

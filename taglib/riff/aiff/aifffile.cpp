@@ -26,6 +26,8 @@
 #include <tbytevector.h>
 #include <tdebug.h>
 #include <id3v2tag.h>
+#include <tstringlist.h>
+#include <tpropertymap.h>
 
 #include "aifffile.h"
 
@@ -65,6 +67,14 @@ RIFF::AIFF::File::File(FileName file, bool readProperties,
     read(readProperties, propertiesStyle);
 }
 
+RIFF::AIFF::File::File(IOStream *stream, bool readProperties,
+                       Properties::ReadStyle propertiesStyle) : RIFF::File(stream, BigEndian)
+{
+  d = new FilePrivate;
+  if(isOpen())
+    read(readProperties, propertiesStyle);
+}
+
 RIFF::AIFF::File::~File()
 {
   delete d;
@@ -74,6 +84,17 @@ ID3v2::Tag *RIFF::AIFF::File::tag() const
 {
   return d->tag;
 }
+
+PropertyMap RIFF::AIFF::File::properties() const
+{
+  return d->tag->properties();
+}
+
+PropertyMap RIFF::AIFF::File::setProperties(const PropertyMap &properties)
+{
+  return d->tag->setProperties(properties);
+}
+
 
 RIFF::AIFF::Properties *RIFF::AIFF::File::audioProperties() const
 {
