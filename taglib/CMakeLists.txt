@@ -13,6 +13,7 @@ INCLUDE_DIRECTORIES(
     ${CMAKE_CURRENT_SOURCE_DIR}/ogg/vorbis
     ${CMAKE_CURRENT_SOURCE_DIR}/ogg/speex
     ${CMAKE_CURRENT_SOURCE_DIR}/mpeg/id3v2
+    ${CMAKE_CURRENT_SOURCE_DIR}/mpeg/id3v2/frames
     ${CMAKE_CURRENT_SOURCE_DIR}/mpeg/id3v1
     ${CMAKE_CURRENT_SOURCE_DIR}/ape
     ${CMAKE_CURRENT_SOURCE_DIR}/wavpack
@@ -94,7 +95,10 @@ ogg/vorbis/vorbisproperties.cpp
 
 SET(flacs_SRCS
 flac/flacfile.cpp
+flac/flacpicture.cpp
 flac/flacproperties.cpp
+flac/flacmetadatablock.cpp
+flac/flacunknownmetadatablock.cpp
 )
 
 SET(common_SRCS
@@ -127,6 +131,8 @@ SET(ape_SRCS
 ape/apetag.cpp
 ape/apefooter.cpp
 ape/apeitem.cpp
+ape/apefile.cpp
+ape/apeproperties.cpp
 )
 
 SET(wavpack_SRCS
@@ -150,6 +156,7 @@ asf/asftag.cpp
 asf/asffile.cpp
 asf/asfproperties.cpp
 asf/asfattribute.cpp
+asf/asfpicture.cpp
 )
 ELSE(WITH_ASF)
 SET(asf_SRCS)

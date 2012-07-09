@@ -15,8 +15,8 @@
  *                                                                         *
  *   You should have received a copy of the GNU Lesser General Public      *
  *   License along with this library; if not, write to the Free Software   *
- *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  *
- *   USA                                                                   *
+ *   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA         *
+ *   02110-1301  USA                                                       *
  *                                                                         *
  *   Alternatively, this file is available under the Mozilla Public        *
  *   License Version 1.1.  You may obtain a copy of the License at         *
@@ -56,23 +56,27 @@ ASF::Tag::~Tag()
     delete d;
 }
 
-String
-ASF::Tag::title() const
+String ASF::Tag::title() const
 {
   return d->title;
 }
 
-String
-ASF::Tag::artist() const
+String ASF::Tag::artist() const
 {
   return d->artist;
 }
 
-String
-ASF::Tag::album() const
+String ASF::Tag::album() const
 {
   if(d->attributeListMap.contains("WM/AlbumTitle"))
     return d->attributeListMap["WM/AlbumTitle"][0].toString();
+  return String::null;
+}
+
+String ASF::Tag::copyright() const
+{
+  if(d->attributeListMap.contains("WM/Copyright"))
+    return d->attributeListMap["WM/Copyright"][0].toString();
   return String::null;
 }
 
@@ -90,8 +94,7 @@ ASF::Tag::license() const
   return d->license;
 }
 
-String
-ASF::Tag::comment() const
+String ASF::Tag::comment() const
 {
   return d->comment;
 }
@@ -104,22 +107,20 @@ ASF::Tag::lyrics() const
   return String::null;
 }
 
-String
-ASF::Tag::rating() const
+
+String ASF::Tag::rating() const
 {
   return d->rating;
 }
 
-unsigned int
-ASF::Tag::year() const
+unsigned int ASF::Tag::year() const
 {
   if(d->attributeListMap.contains("WM/Year"))
     return d->attributeListMap["WM/Year"][0].toString().toInt();
   return 0;
 }
 
-unsigned int
-ASF::Tag::track() const
+unsigned int ASF::Tag::track() const
 {
   if(d->attributeListMap.contains("WM/TrackNumber")) {
     const ASF::Attribute attr = d->attributeListMap["WM/TrackNumber"][0];
@@ -149,8 +150,7 @@ ASF::Tag::bpm() const
   return 0;
 }
 
-String
-ASF::Tag::genre() const
+String ASF::Tag::genre() const
 {
   if(d->attributeListMap.contains("WM/Genre"))
     return d->attributeListMap["WM/Genre"][0].toString();
@@ -197,14 +197,12 @@ ASF::Tag::recordLabel() const
   return String::null;
 }
 
-void
-ASF::Tag::setTitle(const String &value)
+void ASF::Tag::setTitle(const String &value)
 {
   d->title = value;
 }
 
-void
-ASF::Tag::setArtist(const String &value)
+void ASF::Tag::setArtist(const String &value)
 {
   d->artist = value;
 }
@@ -215,14 +213,12 @@ ASF::Tag::setAlbumArtist(const String &value)
   setAttribute("WM/AlbumArtist", value);
 }
 
-void
-ASF::Tag::setLicense(const String &value)
+void ASF::Tag::setCopyright(const String &value)
 {
   d->license = value;
 }
 
-void
-ASF::Tag::setComment(const String &value)
+void ASF::Tag::setComment(const String &value)
 {
   d->comment = value;
 }
@@ -233,20 +229,17 @@ ASF::Tag::setLyrics(const String &value)
   setAttribute("WM/Lyrics", value);
 }
 
-void
-ASF::Tag::setRating(const String &value)
+void ASF::Tag::setRating(const String &value)
 {
   d->rating = value;
 }
 
-void
-ASF::Tag::setAlbum(const String &value)
+void ASF::Tag::setAlbum(const String &value)
 {
   setAttribute("WM/AlbumTitle", value);
 }
 
-void
-ASF::Tag::setGenre(const String &value)
+void ASF::Tag::setGenre(const String &value)
 {
   setAttribute("WM/Genre", value);
 }
@@ -281,14 +274,12 @@ ASF::Tag::setRecordLabel(const String &value)
   setAttribute("WM/Publisher", value);
 }
 
-void
-ASF::Tag::setYear(uint value)
+void ASF::Tag::setYear(uint value)
 {
   setAttribute("WM/Year", String::number(value));
 }
 
-void
-ASF::Tag::setTrack(uint value)
+void ASF::Tag::setTrack(uint value)
 {
   setAttribute("WM/TrackNumber", String::number(value));
 }
@@ -305,8 +296,7 @@ ASF::Tag::setBpm(uint value)
   setAttribute("WM/BeatsPerMinute", String::number(value));
 }
 
-ASF::AttributeListMap&
-ASF::Tag::attributeListMap()
+ASF::AttributeListMap& ASF::Tag::attributeListMap()
 {
   return d->attributeListMap;
 }
@@ -335,7 +325,8 @@ void ASF::Tag::addAttribute(const String &name, const Attribute &attribute)
   }
 }
 
-bool ASF::Tag::isEmpty() const {
+bool ASF::Tag::isEmpty() const
+{
   return TagLib::Tag::isEmpty() &&
          license().isEmpty() &&
          rating().isEmpty() &&
