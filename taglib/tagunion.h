@@ -15,8 +15,8 @@
  *                                                                         *
  *   You should have received a copy of the GNU Lesser General Public      *
  *   License along with this library; if not, write to the Free Software   *
- *   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA         *
- *   02110-1301  USA                                                       *
+ *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  *
+ *   USA                                                                   *
  *                                                                         *
  *   Alternatively, this file is available under the Mozilla Public        *
  *   License Version 1.1.  You may obtain a copy of the License at         *
@@ -56,21 +56,57 @@ namespace TagLib {
 
     void set(int index, Tag *tag);
 
+    // Reimplementations.
     virtual String title() const;
     virtual String artist() const;
+    virtual String albumArtist() const;
     virtual String album() const;
     virtual String comment() const;
+    virtual String lyrics() const;
     virtual String genre() const;
+    virtual String producer() const;
+    virtual String composer() const;
+    virtual String conductor() const;
+    virtual String lyricist() const;
+    virtual String recordLabel() const;
+    virtual String rating() const;
+    virtual String language() const;
+    virtual String key() const;
+    virtual String license() const;
+    virtual String licenseUrl() const;
     virtual uint year() const;
     virtual uint track() const;
-
+    virtual uint totalTracks() const;
+    virtual uint disc() const;
+    virtual uint totalDiscs() const;
+    virtual uint bpm() const;
+    virtual bool isCompilation() const;
+    
     virtual void setTitle(const String &s);
     virtual void setArtist(const String &s);
+    virtual void setAlbumArtist(const String &s);
     virtual void setAlbum(const String &s);
     virtual void setComment(const String &s);
+    virtual void setLyrics(const String &s);
     virtual void setGenre(const String &s);
+    virtual void setProducer(const String &s);
+    virtual void setComposer(const String &s);
+    virtual void setConductor(const String &s);
+    virtual void setLyricist(const String &s);
+    virtual void setRecordLabel(const String &s);
+    virtual void setRating(const String &s);
+    virtual void setLanguage(const String &s);
+    virtual void setKey(const String &s);
+    virtual void setLicense(const String &s);
+    virtual void setLicenseUrl(const String &s);
     virtual void setYear(uint i);
     virtual void setTrack(uint i);
+    virtual void setTotalTracks(uint i);
+    virtual void setDisc(uint i);
+    virtual void setTotalDiscs(uint i);
+    virtual void setBpm(uint i);
+    virtual void setIsCompilation(bool i);
+    
     virtual bool isEmpty() const;
 
     template <class T> T *access(int index, bool create)

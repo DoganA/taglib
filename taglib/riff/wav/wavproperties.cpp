@@ -15,8 +15,8 @@
  *                                                                         *
  *   You should have received a copy of the GNU Lesser General Public      *
  *   License along with this library; if not, write to the Free Software   *
- *   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA         *
- *   02110-1301  USA                                                       *
+ *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  *
+ *   USA                                                                   *
  *                                                                         *
  *   Alternatively, this file is available under the Mozilla Public        *
  *   License Version 1.1.  You may obtain a copy of the License at         *
@@ -35,15 +35,12 @@ using namespace TagLib;
 class RIFF::WAV::Properties::PropertiesPrivate
 {
 public:
-  PropertiesPrivate(uint streamLength = 0) :
+  PropertiesPrivate() :
     format(0),
     length(0),
     bitrate(0),
     sampleRate(0),
-    channels(0),
-    sampleWidth(0),
-    sampleFrames(0),
-    streamLength(streamLength)
+    channels(0)
   {
 
   }
@@ -53,9 +50,6 @@ public:
   int bitrate;
   int sampleRate;
   int channels;
-  int sampleWidth;
-  uint sampleFrames;
-  uint streamLength;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -64,13 +58,7 @@ public:
 
 RIFF::WAV::Properties::Properties(const ByteVector &data, ReadStyle style) : AudioProperties(style)
 {
-  d = new PropertiesPrivate();
-  read(data);
-}
-
-RIFF::WAV::Properties::Properties(const ByteVector &data, uint streamLength, ReadStyle style) : AudioProperties(style)
-{
-  d = new PropertiesPrivate(streamLength);
+  d = new PropertiesPrivate;
   read(data);
 }
 
@@ -99,31 +87,18 @@ int RIFF::WAV::Properties::channels() const
   return d->channels;
 }
 
-int RIFF::WAV::Properties::sampleWidth() const
-{
-  return d->sampleWidth;
-}
-
-uint RIFF::WAV::Properties::sampleFrames() const
-{
-  return d->sampleFrames;
-}
-
 ////////////////////////////////////////////////////////////////////////////////
 // private members
 ////////////////////////////////////////////////////////////////////////////////
 
 void RIFF::WAV::Properties::read(const ByteVector &data)
 {
-  d->format = data.mid(0, 2).toShort(false);
-  d->channels = data.mid(2, 2).toShort(false);
+  d->format     = data.mid(0, 2).toShort(false);
+  d->channels   = data.mid(2, 2).toShort(false);
   d->sampleRate = data.mid(4, 4).toUInt(false);
-  d->sampleWidth = data.mid(14, 2).toShort(false);
+  d->bitrate    = data.mid(8, 4).toUInt(false) * 8 / 1024;
 
-  uint byteRate = data.mid(8, 4).toUInt(false);
-  d->bitrate = byteRate * 8 / 1000;
-
-  d->length = byteRate > 0 ? d->streamLength / byteRate : 0;
-  if(d->channels > 0 && d->sampleWidth > 0)
-    d->sampleFrames = d->streamLength / (d->channels * ((d->sampleWidth + 7) / 8));
+  // short bitsPerSample = data.mid(10, 2).toShort();
+  // d->bitrate    = (sampleRate * sampleSize * d->channels) / 1024.0;
+  // d->length     = sampleFrames / d->sampleRate;
 }

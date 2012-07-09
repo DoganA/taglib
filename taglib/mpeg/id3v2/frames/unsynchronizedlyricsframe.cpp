@@ -17,8 +17,8 @@
  *                                                                         *
  *   You should have received a copy of the GNU Lesser General Public      *
  *   License along with this library; if not, write to the Free Software   *
- *   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA         *
- *   02110-1301  USA                                                       *
+ *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  *
+ *   USA                                                                   *
  *                                                                         *
  *   Alternatively, this file is available under the Mozilla Public        *
  *   License Version 1.1.  You may obtain a copy of the License at         *
@@ -27,9 +27,8 @@
 
 #include "unsynchronizedlyricsframe.h"
 #include <tbytevectorlist.h>
-#include <id3v2tag.h>
 #include <tdebug.h>
-#include <tpropertymap.h>
+#include <tstringlist.h>
 
 using namespace TagLib;
 using namespace ID3v2;
@@ -113,30 +112,6 @@ void UnsynchronizedLyricsFrame::setTextEncoding(String::Type encoding)
   d->textEncoding = encoding;
 }
 
-PropertyMap UnsynchronizedLyricsFrame::asProperties() const
-{
-  PropertyMap map;
-  String key = PropertyMap::prepareKey(description());
-  if(key.isEmpty() || key.upper() == "LYRICS")
-    map.insert("LYRICS", text());
-  else if(key.isNull())
-    map.unsupportedData().append(L"USLT/" + description());
-  else
-    map.insert("LYRICS:" + key, text());
-  return map;
-}
-
-UnsynchronizedLyricsFrame *UnsynchronizedLyricsFrame::findByDescription(const ID3v2::Tag *tag, const String &d) // static
-{
-  ID3v2::FrameList lyrics = tag->frameList("USLT");
-
-  for(ID3v2::FrameList::ConstIterator it = lyrics.begin(); it != lyrics.end(); ++it){
-    UnsynchronizedLyricsFrame *frame = dynamic_cast<UnsynchronizedLyricsFrame *>(*it);
-    if(frame && frame->description() == d)
-      return frame;
-  }
-  return 0;
-}
 ////////////////////////////////////////////////////////////////////////////////
 // protected members
 ////////////////////////////////////////////////////////////////////////////////
@@ -167,11 +142,16 @@ ByteVector UnsynchronizedLyricsFrame::renderFields() const
 {
   ByteVector v;
 
-  v.append(char(d->textEncoding));
+  String::Type encoding = d->textEncoding;
+
+  encoding = checkEncoding(d->description, encoding);
+  encoding = checkEncoding(d->text, encoding);
+
+  v.append(char(encoding));
   v.append(d->language.size() == 3 ? d->language : "XXX");
-  v.append(d->description.data(d->textEncoding));
-  v.append(textDelimiter(d->textEncoding));
-  v.append(d->text.data(d->textEncoding));
+  v.append(d->description.data(encoding));
+  v.append(textDelimiter(encoding));
+  v.append(d->text.data(encoding));
 
   return v;
 }

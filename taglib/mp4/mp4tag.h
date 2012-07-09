@@ -1,5 +1,5 @@
 /**************************************************************************
-    copyright            : (C) 2007,2011 by Lukáš Lalinský
+    copyright            : (C) 2007 by Lukáš Lalinský
     email                : lalinsky@gmail.com
  **************************************************************************/
 
@@ -15,8 +15,8 @@
  *                                                                         *
  *   You should have received a copy of the GNU Lesser General Public      *
  *   License along with this library; if not, write to the Free Software   *
- *   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA         *
- *   02110-1301  USA                                                       *
+ *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  *
+ *   USA                                                                   *
  *                                                                         *
  *   Alternatively, this file is available under the Mozilla Public        *
  *   License Version 1.1.  You may obtain a copy of the License at         *
@@ -44,38 +44,69 @@ namespace TagLib {
     class TAGLIB_EXPORT Tag: public TagLib::Tag
     {
     public:
-        Tag();
         Tag(TagLib::File *file, Atoms *atoms);
         ~Tag();
         bool save();
 
-        String title() const;
-        String artist() const;
-        String album() const;
-        String comment() const;
-        String genre() const;
-        uint year() const;
-        uint track() const;
-
-        void setTitle(const String &value);
-        void setArtist(const String &value);
-        void setAlbum(const String &value);
-        void setComment(const String &value);
-        void setGenre(const String &value);
-        void setYear(uint value);
-        void setTrack(uint value);
+      // Reimplementations.
+      virtual String title() const;
+      virtual String artist() const;
+      virtual String albumArtist() const;
+      virtual String album() const;
+      virtual String comment() const;
+      virtual String lyrics() const;
+      virtual String genre() const;
+      virtual String producer() const;
+      virtual String composer() const;
+      virtual String conductor() const;
+      virtual String lyricist() const;
+      virtual String recordLabel() const;
+      virtual String rating() const { return String::null; };
+      virtual String language() const { return String::null; };
+      virtual String key() const { return String::null; };
+      virtual String license() const;
+      virtual String licenseUrl() const { return String::null; };
+      virtual uint year() const;
+      virtual uint track() const;
+      virtual uint totalTracks() const { return 0; };
+      virtual uint disc() const;
+      virtual uint totalDiscs() const { return 0; };
+      virtual uint bpm() const;
+      virtual bool isCompilation() const { return false; };
+  
+  
+      virtual void setTitle(const String &s);
+      virtual void setArtist(const String &s);
+      virtual void setAlbumArtist(const String &s);
+      virtual void setAlbum(const String &s);
+      virtual void setComment(const String &s);
+      virtual void setLyrics(const String &s);
+      virtual void setGenre(const String &s);
+      virtual void setProducer(const String &s);
+      virtual void setComposer(const String &s);
+      virtual void setConductor(const String &s);
+      virtual void setLyricist(const String &s);
+      virtual void setRecordLabel(const String &s);
+      virtual void setRating(const String &s) {};
+      virtual void setLanguage(const String &s) {};
+      virtual void setKey(const String &s) {};
+      virtual void setLicense(const String &s);
+      virtual void setLicenseUrl(const String &s) {};
+      virtual void setYear(uint i);
+      virtual void setTrack(uint i);
+      virtual void setTotalTracks(uint i) {};
+      virtual void setDisc(uint i);
+      virtual void setTotalDiscs(uint i) {};
+      virtual void setBpm(uint i);
+      virtual void setIsCompilation(bool i) {};
 
         ItemListMap &itemListMap();
 
     private:
-        AtomDataList parseData2(Atom *atom, TagLib::File *file, int expectedFlags = -1, bool freeForm = false);
         TagLib::ByteVectorList parseData(Atom *atom, TagLib::File *file, int expectedFlags = -1, bool freeForm = false);
         void parseText(Atom *atom, TagLib::File *file, int expectedFlags = 1);
         void parseFreeForm(Atom *atom, TagLib::File *file);
         void parseInt(Atom *atom, TagLib::File *file);
-        void parseByte(Atom *atom, TagLib::File *file);
-        void parseUInt(Atom *atom, TagLib::File *file);
-        void parseLongLong(Atom *atom, TagLib::File *file);
         void parseGnre(Atom *atom, TagLib::File *file);
         void parseIntPair(Atom *atom, TagLib::File *file);
         void parseBool(Atom *atom, TagLib::File *file);
@@ -84,19 +115,16 @@ namespace TagLib {
         TagLib::ByteVector padIlst(const ByteVector &data, int length = -1);
         TagLib::ByteVector renderAtom(const ByteVector &name, const TagLib::ByteVector &data);
         TagLib::ByteVector renderData(const ByteVector &name, int flags, const TagLib::ByteVectorList &data);
-        TagLib::ByteVector renderText(const ByteVector &name, Item &item, int flags = TypeUTF8);
+        TagLib::ByteVector renderText(const ByteVector &name, Item &item, int flags = 1);
         TagLib::ByteVector renderFreeForm(const String &name, Item &item);
         TagLib::ByteVector renderBool(const ByteVector &name, Item &item);
         TagLib::ByteVector renderInt(const ByteVector &name, Item &item);
-        TagLib::ByteVector renderByte(const ByteVector &name, Item &item);
-        TagLib::ByteVector renderUInt(const ByteVector &name, Item &item);
-        TagLib::ByteVector renderLongLong(const ByteVector &name, Item &item);
         TagLib::ByteVector renderIntPair(const ByteVector &name, Item &item);
         TagLib::ByteVector renderIntPairNoTrailing(const ByteVector &name, Item &item);
         TagLib::ByteVector renderCovr(const ByteVector &name, Item &item);
 
         void updateParents(AtomList &path, long delta, int ignore = 0);
-        void updateOffsets(long delta, long offset);
+        void updateOffsets(long delta, unsigned long offset);
 
         void saveNew(TagLib::ByteVector &data);
         void saveExisting(TagLib::ByteVector &data, AtomList &path);

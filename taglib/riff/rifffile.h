@@ -15,8 +15,8 @@
  *                                                                         *
  *   You should have received a copy of the GNU Lesser General Public      *
  *   License along with this library; if not, write to the Free Software   *
- *   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA         *
- *   02110-1301  USA                                                       *
+ *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  *
+ *   USA                                                                   *
  *                                                                         *
  *   Alternatively, this file is available under the Mozilla Public        *
  *   License Version 1.1.  You may obtain a copy of the License at         *
@@ -56,12 +56,6 @@ namespace TagLib {
       enum Endianness { BigEndian, LittleEndian };
 
       File(FileName file, Endianness endianness);
-      File(IOStream *stream, Endianness endianness);
-
-      /*!
-       * \return The size of the main RIFF chunk.
-       */
-      uint riffSize() const;
 
       /*!
        * \return The number of chunks in the file.
@@ -72,16 +66,6 @@ namespace TagLib {
        * \return The offset within the file for the selected chunk number.
        */
       uint chunkOffset(uint i) const;
-
-      /*!
-       * \return The size of the chunk data.
-       */
-      uint chunkDataSize(uint i) const;
-
-      /*!
-       * \return The size of the padding after the chunk (can be either 0 or 1).
-       */
-      uint chunkPadding(uint i) const;
 
       /*!
        * \return The name of the specified chunk, for instance, "COMM" or "ID3 "
@@ -110,8 +94,7 @@ namespace TagLib {
 
       void read();
       void writeChunk(const ByteVector &name, const ByteVector &data,
-                      ulong offset, ulong replace = 0,
-                      uint leadingPadding = 0);
+                      ulong offset, ulong replace = 0);
 
       class FilePrivate;
       FilePrivate *d;

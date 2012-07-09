@@ -15,8 +15,8 @@
  *                                                                         *
  *   You should have received a copy of the GNU Lesser General Public      *
  *   License along with this library; if not, write to the Free Software   *
- *   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA         *
- *   02110-1301  USA                                                       *
+ *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  *
+ *   USA                                                                   *
  *                                                                         *
  *   Alternatively, this file is available under the Mozilla Public        *
  *   License Version 1.1.  You may obtain a copy of the License at         *
@@ -63,19 +63,17 @@ namespace TagLib {
     {
     public:
       /*!
-       * Contructs a Vorbis file from \a file.  If \a readProperties is true the
-       * file's audio properties will also be read using \a propertiesStyle.  If
-       * false, \a propertiesStyle is ignored.
+       * Contructs a Vorbis file object without reading a file.  Allows object
+       * fields to be set up before reading.
        */
-      File(FileName file, bool readProperties = true,
-           Properties::ReadStyle propertiesStyle = Properties::Average);
+      File();
 
       /*!
        * Contructs a Vorbis file from \a file.  If \a readProperties is true the
        * file's audio properties will also be read using \a propertiesStyle.  If
        * false, \a propertiesStyle is ignored.
        */
-      File(IOStream *stream, bool readProperties = true,
+      File(FileName file, bool readProperties = true,
            Properties::ReadStyle propertiesStyle = Properties::Average);
 
       /*!
@@ -90,32 +88,25 @@ namespace TagLib {
        */
       virtual Ogg::XiphComment *tag() const;
 
-
-      /*!
-       * Implements the unified property interface -- export function.
-       * This forwards directly to XiphComment::properties().
-       */
-      PropertyMap properties() const;
-
-      /*!
-       * Implements the unified tag dictionary interface -- import function.
-       * Like properties(), this is a forwarder to the file's XiphComment.
-       */
-      PropertyMap setProperties(const PropertyMap &);
-
       /*!
        * Returns the Vorbis::Properties for this file.  If no audio properties
        * were read then this will return a null pointer.
        */
       virtual Properties *audioProperties() const;
 
+      /*!
+       * Reads from Vorbis file.  If \a readProperties is true the file's audio
+       * properties will also be read using \a propertiesStyle.  If false,
+       * \a propertiesStyle is ignored.
+       */
+      void read(bool readProperties = true,
+                Properties::ReadStyle propertiesStyle = Properties::Average);
+
       virtual bool save();
 
     private:
       File(const File &);
       File &operator=(const File &);
-
-      void read(bool readProperties, Properties::ReadStyle propertiesStyle);
 
       class FilePrivate;
       FilePrivate *d;

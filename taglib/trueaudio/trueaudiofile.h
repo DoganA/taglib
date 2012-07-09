@@ -19,8 +19,8 @@
  *                                                                         *
  *   You should have received a copy of the GNU Lesser General Public      *
  *   License along with this library; if not, write to the Free Software   *
- *   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA         *
- *   02110-1301  USA                                                       *
+ *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  *
+ *   USA                                                                   *
  *                                                                         *
  *   Alternatively, this file is available under the Mozilla Public        *
  *   License Version 1.1.  You may obtain a copy of the License at         *
@@ -97,24 +97,6 @@ namespace TagLib {
            Properties::ReadStyle propertiesStyle = Properties::Average);
 
       /*!
-       * Contructs an TrueAudio file from \a file.  If \a readProperties is true the
-       * file's audio properties will also be read using \a propertiesStyle.  If
-       * false, \a propertiesStyle is ignored.
-       */
-      File(IOStream *stream, bool readProperties = true,
-           Properties::ReadStyle propertiesStyle = Properties::Average);
-
-      /*!
-       * Contructs an TrueAudio file from \a file.  If \a readProperties is true the
-       * file's audio properties will also be read using \a propertiesStyle.  If
-       * false, \a propertiesStyle is ignored. The frames will be created using
-       * \a frameFactory.
-       */
-      File(IOStream *stream, ID3v2::FrameFactory *frameFactory,
-           bool readProperties = true,
-           Properties::ReadStyle propertiesStyle = Properties::Average);
-
-      /*!
        * Destroys this instance of the File.
        */
       virtual ~File();
@@ -123,20 +105,6 @@ namespace TagLib {
        * Returns the Tag for this file.
        */
       virtual TagLib::Tag *tag() const;
-
-      /*!
-       * Implements the unified property interface -- export function.
-       * If the file contains both ID3v1 and v2 tags, only ID3v2 will be
-       * converted to the PropertyMap.
-       */
-      PropertyMap properties() const;
-
-      /*!
-       * Implements the unified property interface -- import function.
-       * As with the export, only one tag is taken into account. If the file
-       * has no tag at all, ID3v2 will be created.
-       */
-      PropertyMap setProperties(const PropertyMap &);
 
       /*!
        * Returns the TrueAudio::Properties for this file.  If no audio properties

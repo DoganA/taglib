@@ -15,8 +15,8 @@
  *                                                                         *
  *   You should have received a copy of the GNU Lesser General Public      *
  *   License along with this library; if not, write to the Free Software   *
- *   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA         *
- *   02110-1301  USA                                                       *
+ *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  *
+ *   USA                                                                   *
  *                                                                         *
  *   Alternatively, this file is available under the Mozilla Public        *
  *   License Version 1.1.  You may obtain a copy of the License at         *
@@ -28,15 +28,13 @@
 
 #include "taglib_export.h"
 #include "tfile.h"
-#include "tlist.h"
-#include "tag.h"
 
-#include "flacpicture.h"
 #include "flacproperties.h"
 
 namespace TagLib {
 
   class Tag;
+
   namespace ID3v2 { class FrameFactory; class Tag; }
   namespace ID3v1 { class Tag; }
   namespace Ogg { class XiphComment; }
@@ -67,6 +65,12 @@ namespace TagLib {
     {
     public:
       /*!
+       * Contructs a FLAC file object without reading a file.  Allows object
+       * fields to be set up before reading.
+       */
+      File(ID3v2::FrameFactory *frameFactory = NULL);
+
+      /*!
        * Contructs a FLAC file from \a file.  If \a readProperties is true the
        * file's audio properties will also be read using \a propertiesStyle.  If
        * false, \a propertiesStyle is ignored.
@@ -91,19 +95,6 @@ namespace TagLib {
            Properties::ReadStyle propertiesStyle = Properties::Average);
 
       /*!
-       * Contructs a FLAC file from \a file.  If \a readProperties is true the
-       * file's audio properties will also be read using \a propertiesStyle.  If
-       * false, \a propertiesStyle is ignored.
-       *
-       * If this file contains and ID3v2 tag the frames will be created using
-       * \a frameFactory.
-       */
-      // BIC: merge with the above constructor
-      File(IOStream *stream, ID3v2::FrameFactory *frameFactory,
-           bool readProperties = true,
-           Properties::ReadStyle propertiesStyle = Properties::Average);
-
-      /*!
        * Destroys this instance of the File.
        */
       virtual ~File();
@@ -119,27 +110,18 @@ namespace TagLib {
       virtual TagLib::Tag *tag() const;
 
       /*!
-       * Implements the unified property interface -- export function.
-       * If the file contains more than one tag (e.g. XiphComment and ID3v1),
-       * only the first one (in the order XiphComment, ID3v2, ID3v1) will be
-       * converted to the PropertyMap.
-       */
-      PropertyMap properties() const;
-
-      void removeUnsupportedProperties(const StringList &);
-
-      /*!
-       * Implements the unified property interface -- import function.
-       * As with the export, only one tag is taken into account. If the file
-       * has no tag at all, a XiphComment will be created.
-       */
-      PropertyMap setProperties(const PropertyMap &);
-
-      /*!
        * Returns the FLAC::Properties for this file.  If no audio properties
        * were read then this will return a null pointer.
        */
       virtual Properties *audioProperties() const;
+
+      /*!
+       * Reads from FLAC file.  If \a readProperties is true the file's audio
+       * properties will also be read using \a propertiesStyle.  If false,
+       * \a propertiesStyle is ignored.
+       */
+      void read(bool readProperties = true,
+                Properties::ReadStyle propertiesStyle = Properties::Average);
 
       /*!
        * Save the file.  This will primarily save the XiphComment, but
@@ -214,35 +196,10 @@ namespace TagLib {
        */
       long streamLength();  // BIC: remove
 
-      /*!
-       * Returns a list of pictures attached to the FLAC file.
-       */
-      List<Picture *> pictureList();
-      
-      /*!
-       * Removes an attached picture. If \a del is true the picture's memory
-       * will be freed; if it is false, it must be deleted by the user.
-       */
-      void removePicture(Picture *picture, bool del = true);
-
-      /*!
-       * Remove all attached images.
-       */
-      void removePictures();
-
-      /*!
-       * Add a new picture to the file. The file takes ownership of the
-       * picture and will handle freeing its memory.
-       *
-       * \note The file will be saved only after calling save().
-       */
-      void addPicture(Picture *picture);
-
     private:
       File(const File &);
       File &operator=(const File &);
 
-      void read(bool readProperties, Properties::ReadStyle propertiesStyle);
       void scan();
       long findID3v2();
       long findID3v1();

@@ -15,8 +15,8 @@
  *                                                                         *
  *   You should have received a copy of the GNU Lesser General Public      *
  *   License along with this library; if not, write to the Free Software   *
- *   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA         *
- *   02110-1301  USA                                                       *
+ *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  *
+ *   USA                                                                   *
  *                                                                         *
  *   Alternatively, this file is available under the Mozilla Public        *
  *   License Version 1.1.  You may obtain a copy of the License at         *
@@ -28,16 +28,14 @@
 
 #include "taglib_export.h"
 #include "taglib.h"
-#include "tag.h"
 #include "tbytevector.h"
-#include "tiostream.h"
+#include "tfileio.h"
 
 namespace TagLib {
 
   class String;
   class Tag;
   class AudioProperties;
-  class PropertyMap;
 
   //! A file class with some useful methods for tag manipulation
 
@@ -47,19 +45,51 @@ namespace TagLib {
    * ByteVector and a binary search method for finding patterns in a file.
    */
 
-  class TAGLIB_EXPORT File
+  class TAGLIB_EXPORT File : public TagLib::FileIO
   {
   public:
-    /*!
-     * Position in the file used for seeking.
-     */
-    enum Position {
-      //! Seek from the beginning of the file.
-      Beginning,
-      //! Seek from the current position in the file.
-      Current,
-      //! Seek from the end of the file.
-      End
+    
+  //! A class for pluggable file I/O type resolution.
+
+  /*!
+   * This class is used to extend TagLib's very basic file name based file I/O
+   * type resolution.
+   *
+   * This can be accomplished with:
+   *
+   * \code
+   *
+   * class MyFileIOTypeResolver : FileIOTypeResolver
+   * {
+   *   TagLib::FileIO *createFileIO(FileName fileName)
+   *   {
+   *     if(someCheckForAnHTTPFile(fileName))
+   *       return new MyHTTPFileIO(fileName);
+   *     return 0;
+   *   }
+   * }
+   *
+   * File::addFileIOTypeResolver(new MyFileIOTypeResolver);
+   *
+   * \endcode
+   *
+   * Naturally a less contrived example would be slightly more complex.  This
+   * can be used to add new file I/O types to TagLib.
+   */
+
+    class FileIOTypeResolver
+    {
+    public:
+      /*!
+       * This method must be overriden to provide an additional file I/O type
+       * resolver.  If the resolver is able to determine the file I/O type it
+       * should return a valid File I/O object; if not it should return 0.
+       *
+       * \note The created file I/O is then owned by the File and should not be
+       * deleted.  Deletion will happen automatically when the File passes out
+       * of scope.
+       */
+      virtual FileIO *createFileIO(FileName fileName) const = 0;
     };
 
     /*!
@@ -68,9 +98,30 @@ namespace TagLib {
     virtual ~File();
 
     /*!
+     * Opens the \a file.  \a file should be a be a C-string in the local file
+     * system encoding.
+     *
+     * \note Constructor is protected since this class should only be
+     * instantiated through subclasses.
+     */
+    void open(FileName file);
+
+    /*!
      * Returns the file name in the local file system encoding.
      */
     FileName name() const;
+
+    /*!
+     * Returns the maximum number of bytes to scan when scanning for frames or
+     * tags.
+     */
+    long getMaxScanBytes();
+
+    /*!
+     * Sets the maximum number of bytes to scan when scanning for frames or
+     * tags to \a maxScanBytes.
+     */
+    void setMaxScanBytes(long maxScanBytes);
 
     /*!
      * Returns a pointer to this file's tag.  This should be reimplemented in
@@ -78,36 +129,6 @@ namespace TagLib {
      */
     virtual Tag *tag() const = 0;
 
-    /*!
-     * Exports the tags of the file as dictionary mapping (human readable) tag
-     * names (Strings) to StringLists of tag values. Calls the according specialization
-     * in the File subclasses.
-     * For each metadata object of the file that could not be parsed into the PropertyMap
-     * format, the returend map's unsupportedData() list will contain one entry identifying
-     * that object (e.g. the frame type for ID3v2 tags). Use removeUnsupportedProperties()
-     * to remove (a subset of) them.
-     * BIC: Will be made virtual in future releases.
-     */
-    PropertyMap properties() const;
-
-    /*!
-     * Removes unsupported properties, or a subset of them, from the file's metadata.
-     * The parameter \a properties must contain only entries from
-     * properties().unsupportedData().
-     * BIC: Will be mad virtual in future releases.
-     */
-    void removeUnsupportedProperties(const StringList& properties);
-
-    /*!
-     * Sets the tags of this File to those specified in \a properties. Calls the
-     * according specialization method in the subclasses of File to do the translation
-     * into the format-specific details.
-     * If some value(s) could not be written imported to the specific metadata format,
-     * the returned PropertyMap will contain those value(s). Otherwise it will be empty,
-     * indicating that no problems occured.
-     * BIC: will become pure virtual in the future
-     */
-    PropertyMap setProperties(const PropertyMap &properties);
     /*!
      * Returns a pointer to this file's audio properties.  This should be
      * reimplemented in the concrete subclasses.  If no audio properties were
@@ -215,7 +236,7 @@ namespace TagLib {
      *
      * \see Position
      */
-    void seek(long offset, Position p = Beginning);
+    int seek(long offset, Position p = Beginning);
 
     /*!
      * Reset the end-of-file and error flags on the file.
@@ -233,21 +254,56 @@ namespace TagLib {
     long length();
 
     /*!
-     * Returns true if \a file can be opened for reading.  If the file does not
+     * Returns true if the file can be opened for reading.  If the file does not
      * exist, this will return false.
-     *
-     * \deprecated
      */
-    static bool isReadable(const char *file);
+     bool isReadable();
 
     /*!
-     * Returns true if \a file can be opened for writing.
-     *
-     * \deprecated
+     * Returns true if the file can be opened for writing.
      */
-    static bool isWritable(const char *name);
+    bool isWritable();
+
+    /*!
+     * Return a temporary file to use, creating it if necessary
+     */
+    virtual FileIO* tempFile();
+
+    /*!
+     * Close any previously allocated temporary files
+     * \param overwrite If true, will attempt to replace this file
+     */
+    virtual bool closeTempFile( bool overwrite );
+
+    /*!
+     * Adds \a resolver to the list of FileIOTypeResolvers used by TagLib.  Each
+     * additional FileIOTypeResolver is added to the front of a list of
+     * resolvers that are tried.  If the FileIOTypeResolver returns zero the
+     * next resolver is tried.
+     *
+     * Returns a pointer to the added resolver (the same one that's passed in --
+     * this is mostly so that static inialializers have something to use for
+     * assignment).
+     *
+     * \see FileIOTypeResolver
+     */
+    static const FileIOTypeResolver *addFileIOTypeResolver(const FileIOTypeResolver *resolver);
+
+    /*!
+     * Removes \a resolver from the list of FileIOTypeResolvers used by TagLib.
+     */
+    static void removeFileIOTypeResolver(const FileIOTypeResolver *resolver);
 
   protected:
+    /*!
+     * Construct a File object without opening a file.  Allows object fields to
+     * be set up before opening file.
+     *
+     * \note Constructor is protected since this class should only be
+     * instantiated through subclasses.
+     */
+    File();
+
     /*!
      * Construct a File object and opens the \a file.  \a file should be a
      * be a C-string in the local file system encoding.
@@ -256,14 +312,6 @@ namespace TagLib {
      * instantiated through subclasses.
      */
     File(FileName file);
-
-    /*!
-     * Construct a File object and use the \a stream instance.
-     *
-     * \note Constructor is protected since this class should only be
-     * instantiated through subclasses.
-     */
-    File(IOStream *stream);
 
     /*!
      * Marks the file as valid or invalid.

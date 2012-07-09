@@ -15,8 +15,8 @@
  *                                                                         *
  *   You should have received a copy of the GNU Lesser General Public      *
  *   License along with this library; if not, write to the Free Software   *
- *   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA         *
- *   02110-1301  USA                                                       *
+ *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  *
+ *   USA                                                                   *
  *                                                                         *
  *   Alternatively, this file is available under the Mozilla Public        *
  *   License Version 1.1.  You may obtain a copy of the License at         *
@@ -59,21 +59,15 @@ namespace TagLib {
       Item();
 
       /*!
-       * Constructs a text item with \a key and \a value.
+       * Constructs an item with \a key and \a value.
        */
       // BIC: Remove this, StringList has a constructor from a single string
       Item(const String &key, const String &value);
 
       /*!
-       * Constructs a text item with \a key and \a values.
+       * Constructs an item with \a key and \a values.
        */
       Item(const String &key, const StringList &values);
-
-      /*!
-       * Constructs an item with \a key and \a value.
-       * If \a binary is true a Binary item will be created, otherwise \a value will be interpreted as text
-       */
-      Item(const String &key, const ByteVector &value, bool binary);
 
       /*!
        * Construct an item as a copy of \a item.
@@ -97,20 +91,12 @@ namespace TagLib {
 
       /*!
        * Returns the binary value.
-       * If the item type is not \a Binary, the returned contents are undefined
+       *
+       * \deprecated This will be removed in the next binary incompatible version
+       * as it is not kept in sync with the things that are set using setValue()
+       * and friends.
        */
-      ByteVector binaryData() const;
-
-     /*!
-      * Set the binary value to \a value
-      * The item's type will also be set to \a Binary
-      */
-      void setBinaryData(const ByteVector &value);
-
-#ifndef DO_NOT_DOCUMENT
-      /* Remove in next binary incompatible release */
       ByteVector value() const;
-#endif
 
       /*!
        * Sets the key for the item to \a key.
@@ -118,14 +104,14 @@ namespace TagLib {
       void setKey(const String &key);
 
       /*!
-       * Sets the text value of the item to \a value and clears any previous contents.
+       * Sets the value of the item to \a value and clears any previous contents.
        *
        * \see toString()
        */
       void setValue(const String &value);
 
       /*!
-       * Sets the text value of the item to the list of values in \a value and clears
+       * Sets the value of the item to the list of values in \a value and clears
        * any previous contents.
        *
        * \see toStringList()
@@ -133,14 +119,14 @@ namespace TagLib {
       void setValues(const StringList &values);
 
       /*!
-       * Appends \a value to create (or extend) the current list of text values.
+       * Appends \a value to create (or extend) the current list of values.
        *
        * \see toString()
        */
       void appendValue(const String &value);
 
       /*!
-       * Appends \a values to extend the current list of text values.
+       * Appends \a values to extend the current list of values.
        *
        * \see toStringList()
        */
@@ -157,13 +143,14 @@ namespace TagLib {
        */
       String toString() const;
 
-#ifndef DO_NOT_DOCUMENT
-      /* Remove in next binary incompatible release */
+      /*!
+       * \deprecated
+       * \see values
+       */
       StringList toStringList() const;
-#endif
 
       /*!
-       * Returns the list of text values.
+       * Returns the list of values.
        */
       StringList values() const;
 

@@ -15,15 +15,15 @@
  *                                                                         *
  *   You should have received a copy of the GNU Lesser General Public      *
  *   License along with this library; if not, write to the Free Software   *
- *   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA         *
- *   02110-1301  USA                                                       *
+ *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  *
+ *   USA                                                                   *
  *                                                                         *
  *   Alternatively, this file is available under the Mozilla Public        *
  *   License Version 1.1.  You may obtain a copy of the License at         *
  *   http://www.mozilla.org/MPL/                                           *
  ***************************************************************************/
 
-#ifdef HAVE_CONFIG_H
+#ifndef HAVE_ZLIB
 #include <config.h>
 #endif
 
@@ -45,6 +45,8 @@
 #include "frames/popularimeterframe.h"
 #include "frames/privateframe.h"
 
+#include <string.h>
+
 using namespace TagLib;
 using namespace ID3v2;
 
@@ -65,7 +67,7 @@ public:
   }
 };
 
-FrameFactory FrameFactory::factory;
+FrameFactory *FrameFactory::factory = 0;
 
 ////////////////////////////////////////////////////////////////////////////////
 // public members
@@ -73,7 +75,9 @@ FrameFactory FrameFactory::factory;
 
 FrameFactory *FrameFactory::instance()
 {
-  return &factory;
+  if(!factory)
+    factory = new FrameFactory;
+  return factory;
 }
 
 Frame *FrameFactory::createFrame(const ByteVector &data, bool synchSafeInts) const
@@ -99,7 +103,7 @@ Frame *FrameFactory::createFrame(const ByteVector &origData, Header *tagHeader) 
   // characters.  Also make sure that there is data in the frame.
 
   if(!frameID.size() == (version < 3 ? 3 : 4) ||
-     header->frameSize() <= uint(header->dataLengthIndicator() ? 4 : 0) ||
+     header->frameSize() < uint(header->dataLengthIndicator() ? 4 : 0) ||
      header->frameSize() > data.size())
   {
     delete header;
@@ -107,7 +111,7 @@ Frame *FrameFactory::createFrame(const ByteVector &origData, Header *tagHeader) 
   }
 
   for(ByteVector::ConstIterator it = frameID.begin(); it != frameID.end(); it++) {
-    if( (*it < 'A' || *it > 'Z') && (*it < '1' || *it > '9') ) {
+    if( (*it < 'A' || *it > 'Z') && (*it < '1' || *it > '9') && *it != ' ') {
       delete header;
       return 0;
     }
@@ -183,13 +187,13 @@ Frame *FrameFactory::createFrame(const ByteVector &origData, Header *tagHeader) 
 
   // ID3v2.2 Attached Picture
 
-  if(frameID == "PIC") {
+	if(frameID == "PIC") {
     AttachedPictureFrame *f = new AttachedPictureFrameV22(data, header);
     d->setTextEncoding(f);
     return f;
   }
 
-  // Relative Volume Adjustment (frames 4.11)
+	// Relative Volume Adjustment (frames 4.11)
 
   if(frameID == "RVA2")
     return new RelativeVolumeFrame(data, header);
@@ -280,8 +284,7 @@ bool FrameFactory::updateFrame(Frame::Header *header) const
        frameID == "LNK" ||
        frameID == "RVA" ||
        frameID == "TIM" ||
-       frameID == "TSI" ||
-       frameID == "TDA")
+       frameID == "TSI")
     {
       debug("ID3v2.4 no longer supports the frame type " + String(frameID) +
             ".  It will be discarded from the tag.");
@@ -291,67 +294,94 @@ bool FrameFactory::updateFrame(Frame::Header *header) const
     // ID3v2.2 only used 3 bytes for the frame ID, so we need to convert all of
     // the frames to their 4 byte ID3v2.4 equivalent.
 
-    convertFrame("BUF", "RBUF", header);
-    convertFrame("CNT", "PCNT", header);
-    convertFrame("COM", "COMM", header);
-    convertFrame("CRA", "AENC", header);
-    convertFrame("ETC", "ETCO", header);
-    convertFrame("GEO", "GEOB", header);
-    convertFrame("IPL", "TIPL", header);
-    convertFrame("MCI", "MCDI", header);
-    convertFrame("MLL", "MLLT", header);
-    convertFrame("POP", "POPM", header);
-    convertFrame("REV", "RVRB", header);
-    convertFrame("SLT", "SYLT", header);
-    convertFrame("STC", "SYTC", header);
-    convertFrame("TAL", "TALB", header);
-    convertFrame("TBP", "TBPM", header);
-    convertFrame("TCM", "TCOM", header);
-    convertFrame("TCO", "TCON", header);
-    convertFrame("TCP", "TCMP", header);
-    convertFrame("TCR", "TCOP", header);
-    convertFrame("TDY", "TDLY", header);
-    convertFrame("TEN", "TENC", header);
-    convertFrame("TFT", "TFLT", header);
-    convertFrame("TKE", "TKEY", header);
-    convertFrame("TLA", "TLAN", header);
-    convertFrame("TLE", "TLEN", header);
-    convertFrame("TMT", "TMED", header);
-    convertFrame("TOA", "TOAL", header);
-    convertFrame("TOF", "TOFN", header);
-    convertFrame("TOL", "TOLY", header);
-    convertFrame("TOR", "TDOR", header);
-    convertFrame("TOT", "TOAL", header);
-    convertFrame("TP1", "TPE1", header);
-    convertFrame("TP2", "TPE2", header);
-    convertFrame("TP3", "TPE3", header);
-    convertFrame("TP4", "TPE4", header);
-    convertFrame("TPA", "TPOS", header);
-    convertFrame("TPB", "TPUB", header);
-    convertFrame("TRC", "TSRC", header);
-    convertFrame("TRD", "TDRC", header);
-    convertFrame("TRK", "TRCK", header);
-    convertFrame("TS2", "TSO2", header);
-    convertFrame("TSA", "TSOA", header);
-    convertFrame("TSC", "TSOC", header);
-    convertFrame("TSP", "TSOP", header);
-    convertFrame("TSS", "TSSE", header);
-    convertFrame("TST", "TSOT", header);
-    convertFrame("TT1", "TIT1", header);
-    convertFrame("TT2", "TIT2", header);
-    convertFrame("TT3", "TIT3", header);
-    convertFrame("TXT", "TOLY", header);
-    convertFrame("TXX", "TXXX", header);
-    convertFrame("TYE", "TDRC", header);
-    convertFrame("UFI", "UFID", header);
-    convertFrame("ULT", "USLT", header);
-    convertFrame("WAF", "WOAF", header);
-    convertFrame("WAR", "WOAR", header);
-    convertFrame("WAS", "WOAS", header);
-    convertFrame("WCM", "WCOM", header);
-    convertFrame("WCP", "WCOP", header);
-    convertFrame("WPB", "WPUB", header);
-    convertFrame("WXX", "WXXX", header);
+    /* Some messy macro magic, because otherwise this is a pain... */
+#define CONVERTFRAME(from,to, header)      \
+    if(header->frameID() == (from)) {      \
+      convertFrame((from), (to), header);  \
+      handled = true;                      \
+    }
+
+    bool handled = false;
+
+    CONVERTFRAME("BUF", "RBUF", header);
+    CONVERTFRAME("CNT", "PCNT", header);
+    CONVERTFRAME("COM", "COMM", header);
+    CONVERTFRAME("CRA", "AENC", header);
+    CONVERTFRAME("ETC", "ETCO", header);
+    CONVERTFRAME("GEO", "GEOB", header);
+    CONVERTFRAME("IPL", "TIPL", header);
+    CONVERTFRAME("MCI", "MCDI", header);
+    CONVERTFRAME("MLL", "MLLT", header);
+    CONVERTFRAME("POP", "POPM", header);
+    CONVERTFRAME("REV", "RVRB", header);
+    CONVERTFRAME("SLT", "SYLT", header);
+    CONVERTFRAME("STC", "SYTC", header);
+    CONVERTFRAME("TAL", "TALB", header);
+    CONVERTFRAME("TBP", "TBPM", header);
+    CONVERTFRAME("TCM", "TCOM", header);
+    CONVERTFRAME("TCO", "TCON", header);
+    CONVERTFRAME("TCR", "TCOP", header);
+    CONVERTFRAME("TDA", "TDRC", header);
+    CONVERTFRAME("TDY", "TDLY", header);
+    CONVERTFRAME("TEN", "TENC", header);
+    CONVERTFRAME("TFT", "TFLT", header);
+    CONVERTFRAME("TKE", "TKEY", header);
+    CONVERTFRAME("TLA", "TLAN", header);
+    CONVERTFRAME("TLE", "TLEN", header);
+    CONVERTFRAME("TMT", "TMED", header);
+    CONVERTFRAME("TOA", "TOAL", header);
+    CONVERTFRAME("TOF", "TOFN", header);
+    CONVERTFRAME("TOL", "TOLY", header);
+    CONVERTFRAME("TOR", "TDOR", header);
+    CONVERTFRAME("TOT", "TOAL", header);
+    CONVERTFRAME("TP1", "TPE1", header);
+    CONVERTFRAME("TP2", "TPE2", header);
+    CONVERTFRAME("TP3", "TPE3", header);
+    CONVERTFRAME("TP4", "TPE4", header);
+    CONVERTFRAME("TPA", "TPOS", header);
+    CONVERTFRAME("TPB", "TPUB", header);
+    CONVERTFRAME("TRC", "TSRC", header);
+    CONVERTFRAME("TRD", "TDRC", header);
+    CONVERTFRAME("TRK", "TRCK", header);
+    CONVERTFRAME("TSS", "TSSE", header);
+    CONVERTFRAME("TT1", "TIT1", header);
+    CONVERTFRAME("TT2", "TIT2", header);
+    CONVERTFRAME("TT3", "TIT3", header);
+    CONVERTFRAME("TXT", "TOLY", header);
+    CONVERTFRAME("TXX", "TXXX", header);
+    CONVERTFRAME("TYE", "TDRC", header);
+    CONVERTFRAME("UFI", "UFID", header);
+    CONVERTFRAME("ULT", "USLT", header);
+    CONVERTFRAME("WAF", "WOAF", header);
+    CONVERTFRAME("WAR", "WOAR", header);
+    CONVERTFRAME("WAS", "WOAS", header);
+    CONVERTFRAME("WCM", "WCOM", header);
+    CONVERTFRAME("WCP", "WCOP", header);
+    CONVERTFRAME("WPB", "WPUB", header);
+    CONVERTFRAME("WXX", "WXXX", header);
+
+    // PIC is handled by a special case
+    // in ::AttachedPictureFrameV22 below.
+    if(header->frameID() == "PIC") {
+      handled = true;
+    }
+
+    /* If we didn't manage to discard the header OR convert it,
+     * then convert it mechanically, just to avoid corrupting
+     * the ID3 header as a whole */
+    if (!handled) {
+      char oldFrameType[4];
+      char newFrameType[5];
+
+      memcpy (oldFrameType, header->frameID().data(), 3);
+      oldFrameType[3] = 0;
+
+      memcpy (newFrameType, header->frameID().data(), 3);
+      newFrameType[3] = ' ';
+      newFrameType[4] = 0;
+
+      convertFrame(oldFrameType, newFrameType, header);
+    }
 
     break;
   }
@@ -372,7 +402,6 @@ bool FrameFactory::updateFrame(Frame::Header *header) const
 
     convertFrame("TORY", "TDOR", header);
     convertFrame("TYER", "TDRC", header);
-    convertFrame("IPLS", "TIPL", header);
 
     break;
   }
@@ -417,11 +446,14 @@ void FrameFactory::updateGenre(TextIdentificationFrame *frame) const
     if(s.startsWith("(") && end > 0) {
       // "(12)Genre"
       String text = s.substr(end + 1);
-      bool ok;
-      int number = s.substr(1, end - 1).toInt(&ok);
-      if(ok && number >= 0 && number <= 255 && !(ID3v1::genre(number) == text))
-        newfields.append(s.substr(1, end - 1));
-      if(!text.isEmpty())
+      String numericText = s.substr(1, end - 1);
+      if (numericText.isInt()) {        
+        int number = numericText.toInt();
+        if (number >= 0 && number <= 255 && !(ID3v1::genre(number) == text)) {
+          newfields.append(numericText);
+        }
+      }
+      if (!text.isEmpty())
         newfields.append(text);
     }
     else {

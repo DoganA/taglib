@@ -15,8 +15,8 @@
  *                                                                         *
  *   You should have received a copy of the GNU Lesser General Public      *
  *   License along with this library; if not, write to the Free Software   *
- *   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA         *
- *   02110-1301  USA                                                       *
+ *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  *
+ *   USA                                                                   *
  *                                                                         *
  *   Alternatively, this file is available under the Mozilla Public        *
  *   License Version 1.1.  You may obtain a copy of the License at         *
@@ -42,8 +42,6 @@
 #define DATA(x) (&(x->data[0]))
 
 namespace TagLib {
-  static const char hexTable[17] = "0123456789abcdef";
-
   static const uint crcTable[256] = {
     0x00000000, 0x04c11db7, 0x09823b6e, 0x0d4326d9, 0x130476dc, 0x17c56b6b,
     0x1a864db2, 0x1e475005, 0x2608edb8, 0x22c9f00f, 0x2f8ad6d6, 0x2b4bcb61,
@@ -363,7 +361,7 @@ ByteVector ByteVector::mid(uint index, uint length) const
 
   ConstIterator endIt;
 
-  if(length < size() - index)
+  if(length < 0xffffffff && length + index < size())
     endIt = d->data.begin() + index + length;
   else
     endIt = d->data.end();
@@ -431,62 +429,86 @@ ByteVector &ByteVector::replace(const ByteVector &pattern, const ByteVector &wit
   if(pattern.size() == 0 || pattern.size() > size())
     return *this;
 
-  const uint withSize = with.size();
-  const uint patternSize = pattern.size();
-  int offset = 0;
+  const int originalSize = size();
+  const int patternSize = pattern.size();
+  const int withSize = with.size();
 
-  if(withSize == patternSize) {
-    // I think this case might be common enough to optimize it
-    detach();
-    offset = find(pattern);
-    while(offset >= 0) {
-      ::memcpy(data() + offset, with.data(), withSize);
-      offset = find(pattern, offset + withSize);
-    }
+  // Count the number of matches first
+  int matches = 0;
+  int pos = find(pattern);
+  int prevPos = pos;
+  while(pos >= 0) {
+    matches++;
+    pos = find(pattern, pos + patternSize);
+  }
+
+  if (matches == 0)
     return *this;
-  }
+  else if (matches == 1) {
+    // Fast track for a common case
+    if(withSize > patternSize)
+      resize(originalSize + withSize - patternSize);
 
-  // calculate new size:
-  uint newSize = 0;
-  for(;;) {
-    int next = find(pattern, offset);
-    if(next < 0) {
-      if(offset == 0)
-        // pattern not found, do nothing:
-        return *this;
-      newSize += size() - offset;
-      break;
+    if(patternSize != withSize)
+      ::memmove(data() + prevPos + withSize, data() + prevPos + patternSize, originalSize - prevPos - patternSize);
+
+    if(withSize < patternSize)
+      resize(originalSize + withSize - patternSize);
+
+    ::memcpy(data() + prevPos, with.data(), withSize);
+  }
+  else {
+    if(withSize > patternSize) {
+      // Data size will be increased after the replacement - resize the vector
+      // first and search then for the pattern starting from the end of the
+      // data (rfind). Move each unchanged block (from pos to prevPos) by offset
+      // bytes towards the end of the vector. First block found moves by
+      // (withSize - patternSize) * matches bytes, last one doesn't move at all.
+      int offset = (withSize - patternSize) * matches;
+
+      resize(originalSize + offset);
+
+      prevPos = offset;
+      pos = rfind(pattern, prevPos);
+      while (pos >= 0) {
+        ::memmove(data() + size() - pos + offset, data() + size() - pos, prevPos - pos);
+        ::memcpy(data() + size() - prevPos + offset, with.data(), withSize);
+        offset -= withSize - patternSize;
+        prevPos = pos + patternSize;
+        pos = rfind(pattern, prevPos);
+      }
     }
-    newSize += (next - offset) + withSize;
-    offset = next + patternSize;
-  }
+    else {
+      // Data size will be decreased after the replacement or stays the same -
+      // move data first, resize then. Search for the pattern and move each
+      // unchanged block (from prevPos to pos) by -offset bytes towards the
+      // start of the vector (value of offset variable is negative). First block
+      // found doesn't move at all, last one has to move by
+      // (withSize - patternSize) * matches bytes.
+      int offset = 0;
 
-  // new private data of appropriate size:
-  ByteVectorPrivate *newData = new ByteVectorPrivate(newSize, 0);
-  char *target = DATA(newData);
-  const char *source = data();
+      prevPos = 0;
+      pos = find(pattern, prevPos);
+      while (pos >= 0) {
+        if (offset && patternSize != withSize)
+          ::memmove(data() + prevPos + offset, data() + prevPos, pos - prevPos);
+        ::memcpy(data() + pos + offset, with.data(), withSize);
+        prevPos = pos + patternSize;
+        offset += withSize - patternSize;
+        pos = find(pattern, prevPos);
+      }
 
-  // copy modified data into new private data:
-  offset = 0;
-  for(;;) {
-    int next = find(pattern, offset);
-    if(next < 0) {
-      ::memcpy(target, source + offset, size() - offset);
-      break;
+      // Move last block as well, goes from end of last match to end of data.
+      if (patternSize != withSize) {
+        pos = originalSize;
+        offset += withSize - patternSize;
+        ::memmove(data() + prevPos + offset, data() + prevPos, pos - prevPos);
+      }
+
+      if (patternSize != withSize)
+        resize(originalSize + offset);
     }
-    int chunkSize = next - offset;
-    ::memcpy(target, source + offset, chunkSize);
-    target += chunkSize;
-    ::memcpy(target, with.data(), withSize);
-    target += withSize;
-    offset += chunkSize + patternSize;
   }
-  
-  // replace private data:
-  if(d->deref())
-    delete d;
-
-  d = newData;
 
   return *this;
 }
@@ -599,11 +621,6 @@ short ByteVector::toShort(bool mostSignificantByteFirst) const
   return toNumber<unsigned short>(d->data, mostSignificantByteFirst);
 }
 
-unsigned short ByteVector::toUShort(bool mostSignificantByteFirst) const
-{
-  return toNumber<unsigned short>(d->data, mostSignificantByteFirst);
-}
-
 long long ByteVector::toLongLong(bool mostSignificantByteFirst) const
 {
   return toNumber<unsigned long long>(d->data, mostSignificantByteFirst);
@@ -692,20 +709,6 @@ ByteVector &ByteVector::operator=(const char *data)
 {
   *this = ByteVector(data);
   return *this;
-}
-
-ByteVector ByteVector::toHex() const
-{
-  ByteVector encoded(size() * 2);
-
-  uint j = 0;
-  for(uint i = 0; i < size(); i++) {
-    unsigned char c = d->data[i];
-    encoded[j++] = hexTable[(c >> 4) & 0x0F];
-    encoded[j++] = hexTable[(c     ) & 0x0F];
-  }
-
-  return encoded;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

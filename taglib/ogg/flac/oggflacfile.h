@@ -15,8 +15,8 @@
  *                                                                         *
  *   You should have received a copy of the GNU Lesser General Public      *
  *   License along with this library; if not, write to the Free Software   *
- *   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA         *
- *   02110-1301  USA                                                       *
+ *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  *
+ *   USA                                                                   *
  *                                                                         *
  *   Alternatively, this file is available under the Mozilla Public        *
  *   License Version 1.1.  You may obtain a copy of the License at         *
@@ -64,19 +64,17 @@ namespace TagLib {
     {
     public:
       /*!
-       * Contructs an Ogg/FLAC file from \a file.  If \a readProperties is true
-       * the file's audio properties will also be read using \a propertiesStyle.
-       * If false, \a propertiesStyle is ignored.
+       * Contructs an Ogg/FLAC file object without reading a file.  Allows object
+       * fields to be set up before reading.
        */
-      File(FileName file, bool readProperties = true,
-           Properties::ReadStyle propertiesStyle = Properties::Average);
+      File();
 
       /*!
        * Contructs an Ogg/FLAC file from \a file.  If \a readProperties is true
        * the file's audio properties will also be read using \a propertiesStyle.
        * If false, \a propertiesStyle is ignored.
        */
-      File(IOStream *stream, bool readProperties = true,
+      File(FileName file, bool readProperties = true,
            Properties::ReadStyle propertiesStyle = Properties::Average);
 
       /*!
@@ -96,6 +94,14 @@ namespace TagLib {
       virtual Properties *audioProperties() const;
 
       /*!
+       * Reads from Ogg/FLAC file.  If \a readProperties is true the file's
+       * audio properties will also be read using \a propertiesStyle.  If false,
+       * \a propertiesStyle is ignored.
+       */
+      void read(bool readProperties = true,
+                Properties::ReadStyle propertiesStyle = Properties::Average);
+
+      /*!
        * Save the file.  This will primarily save and update the XiphComment.
        * Returns true if the save is successful.
        */
@@ -111,7 +117,6 @@ namespace TagLib {
       File(const File &);
       File &operator=(const File &);
 
-      void read(bool readProperties, Properties::ReadStyle propertiesStyle);
       void scan();
       ByteVector streamInfoData();
       ByteVector xiphCommentData();

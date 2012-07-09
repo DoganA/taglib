@@ -15,8 +15,8 @@
  *                                                                         *
  *   You should have received a copy of the GNU Lesser General Public      *
  *   License along with this library; if not, write to the Free Software   *
- *   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA         *
- *   02110-1301  USA                                                       *
+ *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  *
+ *   USA                                                                   *
  *                                                                         *
  *   Alternatively, this file is available under the Mozilla Public        *
  *   License Version 1.1.  You may obtain a copy of the License at         *
@@ -27,7 +27,7 @@
 #define TAGLIB_H
 
 #define TAGLIB_MAJOR_VERSION 1
-#define TAGLIB_MINOR_VERSION 7
+#define TAGLIB_MINOR_VERSION 6
 #define TAGLIB_PATCH_VERSION 0
 
 #if defined(__GNUC__) && (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ > 1))
@@ -36,36 +36,13 @@
 #define TAGLIB_IGNORE_MISSING_DESTRUCTOR
 #endif
 
-#if (defined(_MSC_VER) && _MSC_VER >= 1600)
-#define TAGLIB_CONSTRUCT_BITSET(x) static_cast<unsigned long long>(x)
-#else
-#define TAGLIB_CONSTRUCT_BITSET(x) static_cast<unsigned long>(x)
-#endif
-
 #include <string>
-
-#ifdef __APPLE__
-#  include <libkern/OSAtomic.h>
-#  define TAGLIB_ATOMIC_MAC
-#elif defined(WIN32) || defined(_WIN32) || defined(__WIN32__) || defined(__CYGWIN__)
-#  define NOMINMAX
-#  include <windows.h>
-#  define TAGLIB_ATOMIC_WIN
-#elif defined (__GNUC__) && (__GNUC__ * 100 + __GNUC_MINOR__ >= 401)    \
-      && (defined(__i386__) || defined(__i486__) || defined(__i586__) || \
-          defined(__i686__) || defined(__x86_64) || defined(__ia64)) \
-      && !defined(__INTEL_COMPILER)
-#  define TAGLIB_ATOMIC_GCC
-#elif defined(__ia64) && defined(__INTEL_COMPILER)
-#  include <ia64intrin.h>
-#  define TAGLIB_ATOMIC_GCC
-#endif
 
 //! A namespace for all TagLib related classes and functions
 
 /*!
  * This namespace contains everything in TagLib.  For projects working with
- * TagLib extensively it may be convenient to add a
+ * TagLib extensively it may be conveniten to add a
  * \code
  * using namespace TagLib;
  * \endcode
@@ -76,10 +53,9 @@ namespace TagLib {
   class String;
 
   typedef wchar_t wchar;
-  typedef unsigned char  uchar;
-  typedef unsigned short ushort;
-  typedef unsigned int   uint;
-  typedef unsigned long  ulong;
+  typedef unsigned char uchar;
+  typedef unsigned int  uint;
+  typedef unsigned long ulong;
 
   /*!
    * Unfortunately std::wstring isn't defined on some systems, (i.e. GCC < 3)
@@ -99,33 +75,11 @@ namespace TagLib {
   {
   public:
     RefCounter() : refCount(1) {}
-
-#ifdef TAGLIB_ATOMIC_MAC
-    void ref() { OSAtomicIncrement32Barrier(const_cast<int32_t*>(&refCount)); }
-    bool deref() { return ! OSAtomicDecrement32Barrier(const_cast<int32_t*>(&refCount)); }
-    int32_t count() { return refCount; }
-  private:
-    volatile int32_t refCount;
-#elif defined(TAGLIB_ATOMIC_WIN)
-    void ref() { InterlockedIncrement(&refCount); }
-    bool deref() { return ! InterlockedDecrement(&refCount); }
-    long count() { return refCount; }
-  private:
-    volatile long refCount;
-#elif defined(TAGLIB_ATOMIC_GCC)
-    void ref() { __sync_add_and_fetch(&refCount, 1); }
-    bool deref() { return ! __sync_sub_and_fetch(&refCount, 1); }
-    int count() { return refCount; }
-  private:
-    volatile int refCount;
-#else
     void ref() { refCount++; }
-    bool deref() { return ! --refCount; }
+    bool deref() { return ! --refCount ; }
     int count() { return refCount; }
   private:
     uint refCount;
-#endif
-
   };
 
 #endif // DO_NOT_DOCUMENT
@@ -174,9 +128,12 @@ namespace TagLib {
  * Please see the <a href="http://developer.kde.org/~wheeler/taglib.html">TagLib website</a> for the latest
  * downloads.
  *
- * TagLib can be built using the CMake build system. TagLib installs a taglib-config and pkg-config file to
- * make it easier to integrate into various build systems.  Note that TagLib's include install directory \e must
- * be included in the header include path. Simply adding <taglib/tag.h> will \e not work.
+ * Instructions for installing TagLib vary per platform, but generally speaking on UNIX standard configure and
+ * make commands are provided.  TagLib installs a taglib-config and package-config file to make it easier to
+ * integrate into various build systems.  Note that TagLib's include install directory \e must be included in
+ * the header include path.  Simply adding <taglib/tag.h> will \e not work.
+ *
+ * On Windows, TagLib can be built using the CMake build systems.
  *
  * \section start Getting Started
  *

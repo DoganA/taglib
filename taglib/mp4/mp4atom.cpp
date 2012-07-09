@@ -15,8 +15,8 @@
  *                                                                         *
  *   You should have received a copy of the GNU Lesser General Public      *
  *   License along with this library; if not, write to the Free Software   *
- *   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA         *
- *   02110-1301  USA                                                       *
+ *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  *
+ *   USA                                                                   *
  *                                                                         *
  *   Alternatively, this file is available under the Mozilla Public        *
  *   License Version 1.1.  You may obtain a copy of the License at         *
@@ -27,16 +27,17 @@
 #include <config.h>
 #endif
 
+#ifdef WITH_MP4
+
 #include <tdebug.h>
 #include <tstring.h>
 #include "mp4atom.h"
 
 using namespace TagLib;
 
-const char *MP4::Atom::containers[11] = {
+const char *MP4::Atom::containers[10] = {
     "moov", "udta", "mdia", "meta", "ilst",
     "stbl", "minf", "moof", "traf", "trak",
-    "stsd"
 };
 
 MP4::Atom::Atom(File *file)
@@ -80,9 +81,6 @@ MP4::Atom::Atom(File *file)
     if(name == containers[i]) {
       if(name == "meta") {
         file->seek(4, File::Current);
-      }
-      else if(name == "stsd") {
-        file->seek(8, File::Current);
       }
       while(file->tell() < offset + length) {
         MP4::Atom *child = new MP4::Atom(file);
@@ -196,3 +194,4 @@ MP4::Atoms::path(const char *name1, const char *name2, const char *name3, const 
   return path;
 }
 
+#endif

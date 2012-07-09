@@ -15,8 +15,8 @@
  *                                                                         *
  *   You should have received a copy of the GNU Lesser General Public      *
  *   License along with this library; if not, write to the Free Software   *
- *   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA         *
- *   02110-1301  USA                                                       *
+ *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  *
+ *   USA                                                                   *
  *                                                                         *
  *   Alternatively, this file is available under the Mozilla Public        *
  *   License Version 1.1.  You may obtain a copy of the License at         *
@@ -26,8 +26,6 @@
 #include <tbytevector.h>
 #include <tdebug.h>
 #include <id3v2tag.h>
-#include <tstringlist.h>
-#include <tpropertymap.h>
 
 #include "wavfile.h"
 
@@ -38,8 +36,7 @@ class RIFF::WAV::File::FilePrivate
 public:
   FilePrivate() :
     properties(0),
-    tag(0),
-    tagChunkID("ID3 ")
+    tag(0)
   {
 
   }
@@ -52,7 +49,6 @@ public:
 
   Properties *properties;
   ID3v2::Tag *tag;
-  ByteVector tagChunkID;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -61,14 +57,6 @@ public:
 
 RIFF::WAV::File::File(FileName file, bool readProperties,
                        Properties::ReadStyle propertiesStyle) : RIFF::File(file, LittleEndian)
-{
-  d = new FilePrivate;
-  if(isOpen())
-    read(readProperties, propertiesStyle);
-}
-
-RIFF::WAV::File::File(IOStream *stream, bool readProperties,
-                       Properties::ReadStyle propertiesStyle) : RIFF::File(stream, LittleEndian)
 {
   d = new FilePrivate;
   if(isOpen())
@@ -85,17 +73,6 @@ ID3v2::Tag *RIFF::WAV::File::tag() const
   return d->tag;
 }
 
-PropertyMap RIFF::WAV::File::properties() const
-{
-  return d->tag->properties();
-}
-
-PropertyMap RIFF::WAV::File::setProperties(const PropertyMap &properties)
-{
-  return d->tag->setProperties(properties);
-}
-
-
 RIFF::WAV::Properties *RIFF::WAV::File::audioProperties() const
 {
   return d->properties;
@@ -108,12 +85,7 @@ bool RIFF::WAV::File::save()
     return false;
   }
 
-  if(!isValid()) {
-    debug("RIFF::WAV::File::save() -- Trying to save invalid file.");
-    return false;
-  }
-
-  setChunkData(d->tagChunkID, d->tag->render());
+  setChunkData("ID3 ", d->tag->render());
 
   return true;
 }
@@ -124,21 +96,12 @@ bool RIFF::WAV::File::save()
 
 void RIFF::WAV::File::read(bool readProperties, Properties::ReadStyle propertiesStyle)
 {
-  ByteVector formatData;
-  uint streamLength = 0;
   for(uint i = 0; i < chunkCount(); i++) {
-    if(chunkName(i) == "ID3 " || chunkName(i) == "id3 ") {
-      d->tagChunkID = chunkName(i);
+    if(chunkName(i) == "ID3 ")
       d->tag = new ID3v2::Tag(this, chunkOffset(i));
-    }
     else if(chunkName(i) == "fmt " && readProperties)
-      formatData = chunkData(i);
-    else if(chunkName(i) == "data" && readProperties)
-      streamLength = chunkDataSize(i);
+      d->properties = new Properties(chunkData(i), propertiesStyle);
   }
-
-  if(!formatData.isEmpty())
-    d->properties = new Properties(formatData, streamLength, propertiesStyle);
 
   if(!d->tag)
     d->tag = new ID3v2::Tag;

@@ -15,8 +15,8 @@
  *                                                                         *
  *   You should have received a copy of the GNU Lesser General Public      *
  *   License along with this library; if not, write to the Free Software   *
- *   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA         *
- *   02110-1301  USA                                                       *
+ *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  *
+ *   USA                                                                   *
  *                                                                         *
  *   Alternatively, this file is available under the Mozilla Public        *
  *   License Version 1.1.  You may obtain a copy of the License at         *
@@ -133,22 +133,57 @@ namespace TagLib {
       virtual ~Tag();
 
       // Reimplementations.
-
       virtual String title() const;
       virtual String artist() const;
+      virtual String albumArtist() const;
       virtual String album() const;
       virtual String comment() const;
+      virtual String lyrics() const;
       virtual String genre() const;
+      virtual String producer() const;
+      virtual String composer() const;
+      virtual String conductor() const;
+      virtual String lyricist() const;
+      virtual String recordLabel() const;
+      virtual String rating() const;
+      virtual String language() const;
+      virtual String key() const;
+      virtual String license() const;
+      virtual String licenseUrl() const;
       virtual uint year() const;
       virtual uint track() const;
-
+      virtual uint totalTracks() const;
+      virtual uint disc() const;
+      virtual uint totalDiscs() const;
+      virtual uint bpm() const;
+      virtual bool isCompilation() const;
+  
+  
       virtual void setTitle(const String &s);
       virtual void setArtist(const String &s);
+      virtual void setAlbumArtist(const String &s);
       virtual void setAlbum(const String &s);
       virtual void setComment(const String &s);
+      virtual void setLyrics(const String &s);
       virtual void setGenre(const String &s);
+      virtual void setProducer(const String &s);
+      virtual void setComposer(const String &s);
+      virtual void setConductor(const String &s);
+      virtual void setLyricist(const String &s);
+      virtual void setRecordLabel(const String &s);
+      virtual void setRating(const String &s);
+      virtual void setLanguage(const String &s);
+      virtual void setKey(const String &s);
+      virtual void setLicense(const String &s);
+      virtual void setLicenseUrl(const String &s);
       virtual void setYear(uint i);
       virtual void setTrack(uint i);
+      virtual void setTotalTracks(uint i);
+      virtual void setDisc(uint i);
+      virtual void setTotalDiscs(uint i);
+      virtual void setBpm(uint i);
+      virtual void setIsCompilation(bool i);
+      
 
       virtual bool isEmpty() const;
 
@@ -261,68 +296,9 @@ namespace TagLib {
       void removeFrames(const ByteVector &id);
 
       /*!
-       * Implements the unified property interface -- export function.
-       * This function does some work to translate the hard-specified ID3v2
-       * frame types into a free-form string-to-stringlist PropertyMap:
-       *  - if ID3v2 frame ID is known by Frame::frameIDToKey(), the returned
-       *    key is used
-       *  - if the frame ID is "TXXX" (user text frame), the description() is
-       *    used as key
-       *  - if the frame ID is "WXXX" (user url frame),
-       *    - if the description is empty or "URL", the key "URL" is used
-       *    - otherwise, the key "URL:<description>" is used;
-       *  - if the frame ID is "COMM" (comments frame),
-       *    - if the description is empty or "COMMENT", the key "COMMENT"
-       *      is used
-       *    - otherwise, the key "COMMENT:<description>" is used;
-       *  - if the frame ID is "USLT" (unsynchronized lyrics),
-       *    - if the description is empty or "LYRICS", the key "LYRICS" is used
-       *    - otherwise, the key "LYRICS:<description>" is used;
-       *  - if the frame ID is "TIPL" (involved peoples list), and if all the
-       *    roles defined in the frame are known in TextIdentificationFrame::involvedPeopleMap(),
-       *    then "<role>=<name>" will be contained in the returned obejct for each
-       *  - if the frame ID is "TMCL" (musician credit list), then
-       *    "PERFORMER:<instrument>=<name>" will be contained in the returned
-       *    PropertyMap for each defined musician
-       *  In any other case, the unsupportedData() of the returned object will contain
-       *  the frame's ID and, in case of a frame ID which is allowed to appear more than
-       *  once, the description, separated by a "/".
-       *
-       */
-      PropertyMap properties() const;
-
-      /*!
-       * Removes unsupported frames given by \a properties. The elements of
-       * \a properties must be taken from properties().unsupportedData(); they
-       * are of one of the following forms:
-       *  - a four-character frame ID, if the ID3 specification allows only one
-       *    frame with that ID (thus, the frame is uniquely determined)
-       *  - frameID + "/" + description(), when the ID is one of "TXXX", "WXXX",
-       *    "COMM", or "USLT",
-       *  - "UNKNOWN/" + frameID, for frames that could not be parsed by TagLib.
-       *    In that case, *all* unknown frames with the given ID will be removed.
-       */
-      void removeUnsupportedProperties(const StringList &properties);
-
-      /*!
-       * Implements the unified property interface -- import function.
-       * See the comments in properties().
-       */
-      PropertyMap setProperties(const PropertyMap &);
-
-      /*!
        * Render the tag back to binary data, suitable to be written to disk.
        */
       ByteVector render() const;
-
-      /*!
-       * Render the tag back to binary data, suitable to be written to disk.
-       *
-       * The \a version parameter specifies the version of the rendered
-       * ID3v2 tag. It can be either 4 or 3.
-       */
-      // BIC: combine with the above method
-      ByteVector render(int version) const;
 
     protected:
       /*!
@@ -345,7 +321,10 @@ namespace TagLib {
        */
       void setTextFrame(const ByteVector &id, const String &value);
 
-      void downgradeFrames(FrameList *existingFrames, FrameList *newFrames) const;
+      String getTextFrame(const String &property) const;
+      
+      String getNameForRole(const ByteVector &id, const String& role) const;
+      void setNameForRole(const ByteVector &id, const String& role, const String& value);
 
     private:
       Tag(const Tag &);

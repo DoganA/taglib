@@ -15,8 +15,8 @@
  *                                                                         *
  *   You should have received a copy of the GNU Lesser General Public      *
  *   License along with this library; if not, write to the Free Software   *
- *   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA         *
- *   02110-1301  USA                                                       *
+ *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  *
+ *   USA                                                                   *
  *                                                                         *
  *   Alternatively, this file is available under the Mozilla Public        *
  *   License Version 1.1.  You may obtain a copy of the License at         *
@@ -26,6 +26,8 @@
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
+
+#ifdef WITH_MP4
 
 #include <tdebug.h>
 #include <tstring.h>
@@ -63,15 +65,14 @@ public:
   MP4::Properties *properties;
 };
 
-MP4::File::File(FileName file, bool readProperties, AudioProperties::ReadStyle audioPropertiesStyle)
-    : TagLib::File(file)
+// File-less constructor variant to allow configuration of object properties before reading.
+MP4::File::File()
 {
   d = new FilePrivate;
-  read(readProperties, audioPropertiesStyle);
 }
 
-MP4::File::File(IOStream *stream, bool readProperties, AudioProperties::ReadStyle audioPropertiesStyle)
-    : TagLib::File(stream)
+MP4::File::File(FileName file, bool readProperties, AudioProperties::ReadStyle audioPropertiesStyle)
+    : TagLib::File(file)
 {
   d = new FilePrivate;
   read(readProperties, audioPropertiesStyle);
@@ -118,13 +119,6 @@ MP4::File::read(bool readProperties, Properties::ReadStyle audioPropertiesStyle)
     return;
   }
 
-  // must have a moov atom, otherwise consider it invalid
-  MP4::Atom *moov = d->atoms->find("moov");
-  if(!moov) {
-    setValid(false);
-    return;
-  }
-
   d->tag = new Tag(this, d->atoms);
   if(readProperties) {
     d->properties = new Properties(this, d->atoms, audioPropertiesStyle);
@@ -134,16 +128,10 @@ MP4::File::read(bool readProperties, Properties::ReadStyle audioPropertiesStyle)
 bool
 MP4::File::save()
 {
-  if(readOnly()) {
-    debug("MP4::File::save() -- File is read only.");
+  if(!isValid())
     return false;
-  }
-
-  if(!isValid()) {
-    debug("MP4::File::save() -- Trying to save invalid file.");
-    return false;
-  }
 
   return d->tag->save();
 }
 
+#endif

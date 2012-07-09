@@ -15,8 +15,8 @@
  *                                                                         *
  *   You should have received a copy of the GNU Lesser General Public      *
  *   License along with this library; if not, write to the Free Software   *
- *   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA         *
- *   02110-1301  USA                                                       *
+ *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  *
+ *   USA                                                                   *
  *                                                                         *
  *   Alternatively, this file is available under the Mozilla Public        *
  *   License Version 1.1.  You may obtain a copy of the License at         *
@@ -44,7 +44,7 @@ static double ConvertFromIeeeExtended(unsigned char *bytes)
   double f;
   int expon;
   unsigned long hiMant, loMant;
-
+    
   expon  = ((bytes[0] & 0x7F) << 8) | (bytes[1] & 0xFF);
 
   hiMant = ((unsigned long)(bytes[2] & 0xFF) << 24) |
@@ -84,9 +84,7 @@ public:
     length(0),
     bitrate(0),
     sampleRate(0),
-    channels(0),
-    sampleWidth(0),
-    sampleFrames(0)
+    channels(0)
   {
 
   }
@@ -95,8 +93,6 @@ public:
   int bitrate;
   int sampleRate;
   int channels;
-  int sampleWidth;
-  uint sampleFrames;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -134,16 +130,6 @@ int RIFF::AIFF::Properties::channels() const
   return d->channels;
 }
 
-int RIFF::AIFF::Properties::sampleWidth() const
-{
-  return d->sampleWidth;
-}
-
-uint RIFF::AIFF::Properties::sampleFrames() const
-{
-  return d->sampleFrames;
-}
-
 ////////////////////////////////////////////////////////////////////////////////
 // private members
 ////////////////////////////////////////////////////////////////////////////////
@@ -151,10 +137,10 @@ uint RIFF::AIFF::Properties::sampleFrames() const
 void RIFF::AIFF::Properties::read(const ByteVector &data)
 {
   d->channels       = data.mid(0, 2).toShort();
-  d->sampleFrames   = data.mid(2, 4).toUInt();
-  d->sampleWidth    = data.mid(6, 2).toShort();
+  uint sampleFrames = data.mid(2, 4).toUInt();
+  short sampleSize  = data.mid(6, 2).toShort();
   double sampleRate = ConvertFromIeeeExtended(reinterpret_cast<unsigned char *>(data.mid(8, 10).data()));
   d->sampleRate     = sampleRate;
-  d->bitrate        = (sampleRate * d->sampleWidth * d->channels) / 1000.0;
-  d->length         = d->sampleRate > 0 ? d->sampleFrames / d->sampleRate : 0;
+  d->bitrate        = (sampleRate * sampleSize * d->channels) / 1024.0;
+  d->length         = sampleFrames / d->sampleRate;
 }

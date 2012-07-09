@@ -15,8 +15,8 @@
  *                                                                         *
  *   You should have received a copy of the GNU Lesser General Public      *
  *   License along with this library; if not, write to the Free Software   *
- *   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA         *
- *   02110-1301  USA                                                       *
+ *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  *
+ *   USA                                                                   *
  *                                                                         *
  *   Alternatively, this file is available under the Mozilla Public        *
  *   License Version 1.1.  You may obtain a copy of the License at         *
@@ -24,226 +24,138 @@
  ***************************************************************************/
 
 #include "tfile.h"
-#include "tfilestream.h"
+#include "tlist.h"
+#include "tlocalfileio.h"
 #include "tstring.h"
 #include "tdebug.h"
-#include "tpropertymap.h"
 
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
-
-#ifdef _WIN32
-# include <wchar.h>
-# include <windows.h>
-# include <io.h>
-# define ftruncate _chsize
-#else
-# include <unistd.h>
-#endif
-
-#include <stdlib.h>
-
-#ifndef R_OK
-# define R_OK 4
-#endif
-#ifndef W_OK
-# define W_OK 2
-#endif
-
-#include "asffile.h"
-#include "mpegfile.h"
-#include "vorbisfile.h"
-#include "flacfile.h"
-#include "oggflacfile.h"
-#include "mpcfile.h"
-#include "mp4file.h"
-#include "wavpackfile.h"
-#include "speexfile.h"
-#include "trueaudiofile.h"
-#include "aifffile.h"
-#include "wavfile.h"
-#include "apefile.h"
-#include "modfile.h"
-#include "s3mfile.h"
-#include "itfile.h"
-#include "xmfile.h"
 
 using namespace TagLib;
 
 class File::FilePrivate
 {
 public:
-  FilePrivate(IOStream *stream);
+  FilePrivate();
 
-  IOStream *stream;
+  FileIO *fileIO;
+
+  long maxScanBytes;
   bool valid;
-  static const uint bufferSize = 1024;
+  ulong size;
+  static const uint bufferSize = 16384;
+  static List<const FileIOTypeResolver *> fileIOTypeResolvers;
 };
 
-File::FilePrivate::FilePrivate(IOStream *stream) :
-  stream(stream),
-  valid(true)
+File::FilePrivate::FilePrivate() :
+  fileIO(NULL),
+  maxScanBytes(0),
+  valid(true),
+  size(0)
 {
 }
+
+List<const File::FileIOTypeResolver *> File::FilePrivate::fileIOTypeResolvers;
 
 ////////////////////////////////////////////////////////////////////////////////
 // public members
 ////////////////////////////////////////////////////////////////////////////////
 
-File::File(FileName fileName)
+File::File()
 {
-  IOStream *stream = new FileStream(fileName);
-  d = new FilePrivate(stream);
+  d = new FilePrivate();
 }
 
-File::File(IOStream *stream)
+File::File(FileName file)
 {
-  d = new FilePrivate(stream);
+  d = new FilePrivate();
+  open(file);
 }
 
 File::~File()
 {
-  if(d->stream)
-    delete d->stream;
+  if(d->fileIO)
+    delete d->fileIO;
   delete d;
+}
+
+void File::open(FileName file)
+{
+  List<const FileIOTypeResolver *>::ConstIterator it = FilePrivate::fileIOTypeResolvers.begin();
+
+  for(; it != FilePrivate::fileIOTypeResolvers.end(); ++it) {
+    FileIO *fileIO = (*it)->createFileIO(file);
+    if(fileIO) {
+      d->fileIO = fileIO;
+      break;
+    }
+  }
+
+  if (!d->fileIO)
+    d->fileIO = new LocalFileIO(file);
+
+  if (d->fileIO && !d->fileIO->isOpen()) {
+    delete d->fileIO;
+    d->fileIO = NULL;
+  }
+
+  if(!d->fileIO)
+    debug("Could not open file " + String((const char *) file));
 }
 
 FileName File::name() const
 {
-  return d->stream->name();
+  if(!d->fileIO) {
+    debug("File::name() -- Invalid File");
+    return (char *) NULL;
+  }
+
+  return d->fileIO->name();
 }
 
-PropertyMap File::properties() const
+long File::getMaxScanBytes()
 {
-  // ugly workaround until this method is virtual
-  if(dynamic_cast<const APE::File* >(this))
-    return dynamic_cast<const APE::File* >(this)->properties();
-  if(dynamic_cast<const FLAC::File* >(this))
-    return dynamic_cast<const FLAC::File* >(this)->properties();
-  if(dynamic_cast<const IT::File* >(this))
-    return dynamic_cast<const IT::File* >(this)->properties();
-  if(dynamic_cast<const Mod::File* >(this))
-    return dynamic_cast<const Mod::File* >(this)->properties();
-  if(dynamic_cast<const MPC::File* >(this))
-    return dynamic_cast<const MPC::File* >(this)->properties();
-  if(dynamic_cast<const MPEG::File* >(this))
-    return dynamic_cast<const MPEG::File* >(this)->properties();
-  if(dynamic_cast<const Ogg::FLAC::File* >(this))
-    return dynamic_cast<const Ogg::FLAC::File* >(this)->properties();
-  if(dynamic_cast<const Ogg::Speex::File* >(this))
-    return dynamic_cast<const Ogg::Speex::File* >(this)->properties();
-  if(dynamic_cast<const Ogg::Vorbis::File* >(this))
-    return dynamic_cast<const Ogg::Vorbis::File* >(this)->properties();
-  if(dynamic_cast<const RIFF::AIFF::File* >(this))
-    return dynamic_cast<const RIFF::AIFF::File* >(this)->properties();
-  if(dynamic_cast<const RIFF::WAV::File* >(this))
-    return dynamic_cast<const RIFF::WAV::File* >(this)->properties();
-  if(dynamic_cast<const S3M::File* >(this))
-    return dynamic_cast<const S3M::File* >(this)->properties();
-  if(dynamic_cast<const TrueAudio::File* >(this))
-    return dynamic_cast<const TrueAudio::File* >(this)->properties();
-  if(dynamic_cast<const WavPack::File* >(this))
-    return dynamic_cast<const WavPack::File* >(this)->properties();
-  if(dynamic_cast<const XM::File* >(this))
-    return dynamic_cast<const XM::File* >(this)->properties();
-  // no specialized implementation available -> use generic one
-  // - ASF: ugly format, largely undocumented, not worth implementing
-  //   dict interface ...
-  // - MP4: taglib's MP4::Tag does not really support anything beyond
-  //   the basic implementation, therefor we use just the default Tag
-  //   interface
-  return tag()->properties();
+  return d->maxScanBytes;
 }
 
-void File::removeUnsupportedProperties(const StringList &properties)
+void File::setMaxScanBytes(long maxScanBytes)
 {
-  // here we only consider those formats that could possibly contain
-  // unsupported properties
-  if(dynamic_cast<APE::File* >(this))
-    dynamic_cast<APE::File* >(this)->removeUnsupportedProperties(properties);
-  else if(dynamic_cast<FLAC::File* >(this))
-    dynamic_cast<FLAC::File* >(this)->removeUnsupportedProperties(properties);
-  else if(dynamic_cast<MPC::File* >(this))
-    dynamic_cast<MPC::File* >(this)->removeUnsupportedProperties(properties);
-  else if(dynamic_cast<MPEG::File* >(this))
-    dynamic_cast<MPEG::File* >(this)->removeUnsupportedProperties(properties);
-  else if(dynamic_cast<Ogg::FLAC::File* >(this))
-    dynamic_cast<Ogg::FLAC::File* >(this)->removeUnsupportedProperties(properties);
-  else if(dynamic_cast<Ogg::Speex::File* >(this))
-    dynamic_cast<Ogg::Speex::File* >(this)->removeUnsupportedProperties(properties);
-  else if(dynamic_cast<Ogg::Vorbis::File* >(this))
-    dynamic_cast<Ogg::Vorbis::File* >(this)->removeUnsupportedProperties(properties);
-  else if(dynamic_cast<RIFF::AIFF::File* >(this))
-    dynamic_cast<RIFF::AIFF::File* >(this)->removeUnsupportedProperties(properties);
-  else if(dynamic_cast<RIFF::WAV::File* >(this))
-    dynamic_cast<RIFF::WAV::File* >(this)->removeUnsupportedProperties(properties);
-  else if(dynamic_cast<S3M::File* >(this))
-    dynamic_cast<S3M::File* >(this)->removeUnsupportedProperties(properties);
-  else if(dynamic_cast<TrueAudio::File* >(this))
-    dynamic_cast<TrueAudio::File* >(this)->removeUnsupportedProperties(properties);
-  else if(dynamic_cast<WavPack::File* >(this))
-    dynamic_cast<WavPack::File* >(this)->removeUnsupportedProperties(properties);
-  else if(dynamic_cast<XM::File* >(this))
-    dynamic_cast<XM::File* >(this)->removeUnsupportedProperties(properties);
-  else
-    tag()->removeUnsupportedProperties(properties);
-}
-
-PropertyMap File::setProperties(const PropertyMap &properties)
-{
-  if(dynamic_cast<APE::File* >(this))
-    return dynamic_cast<APE::File* >(this)->setProperties(properties);
-  else if(dynamic_cast<FLAC::File* >(this))
-    return dynamic_cast<FLAC::File* >(this)->setProperties(properties);
-  else if(dynamic_cast<IT::File* >(this))
-    return dynamic_cast<IT::File* >(this)->setProperties(properties);
-  else if(dynamic_cast<Mod::File* >(this))
-    return dynamic_cast<Mod::File* >(this)->setProperties(properties);
-  else if(dynamic_cast<MPC::File* >(this))
-    return dynamic_cast<MPC::File* >(this)->setProperties(properties);
-  else if(dynamic_cast<MPEG::File* >(this))
-    return dynamic_cast<MPEG::File* >(this)->setProperties(properties);
-  else if(dynamic_cast<Ogg::FLAC::File* >(this))
-    return dynamic_cast<Ogg::FLAC::File* >(this)->setProperties(properties);
-  else if(dynamic_cast<Ogg::Speex::File* >(this))
-    return dynamic_cast<Ogg::Speex::File* >(this)->setProperties(properties);
-  else if(dynamic_cast<Ogg::Vorbis::File* >(this))
-    return dynamic_cast<Ogg::Vorbis::File* >(this)->setProperties(properties);
-  else if(dynamic_cast<RIFF::AIFF::File* >(this))
-    return dynamic_cast<RIFF::AIFF::File* >(this)->setProperties(properties);
-  else if(dynamic_cast<RIFF::WAV::File* >(this))
-    return dynamic_cast<RIFF::WAV::File* >(this)->setProperties(properties);
-  else if(dynamic_cast<S3M::File* >(this))
-    return dynamic_cast<S3M::File* >(this)->setProperties(properties);
-  else if(dynamic_cast<TrueAudio::File* >(this))
-    return dynamic_cast<TrueAudio::File* >(this)->setProperties(properties);
-  else if(dynamic_cast<WavPack::File* >(this))
-    return dynamic_cast<WavPack::File* >(this)->setProperties(properties);
-  else if(dynamic_cast<XM::File* >(this))
-    return dynamic_cast<XM::File* >(this)->setProperties(properties);
-  else
-    return tag()->setProperties(properties);
+  d->maxScanBytes = maxScanBytes;
 }
 
 ByteVector File::readBlock(ulong length)
 {
-  return d->stream->readBlock(length);
+  if(!d->fileIO) {
+    debug("File::readBlock() -- Invalid File");
+    return ByteVector::null;
+  }
+
+  if(length == 0)
+    return ByteVector::null;
+
+  return d->fileIO->readBlock(length);
 }
 
 void File::writeBlock(const ByteVector &data)
 {
-  d->stream->writeBlock(data);
+  if(!d->fileIO)
+    return;
+
+  d->fileIO->writeBlock(data);
 }
 
 long File::find(const ByteVector &pattern, long fromOffset, const ByteVector &before)
 {
-  if(!d->stream || pattern.size() > d->bufferSize)
+  if(!d->fileIO || pattern.size() > d->bufferSize)
       return -1;
 
   // The position in the file that the current buffer starts at.
 
+  long maxScanBytes = d->maxScanBytes;
   long bufferOffset = fromOffset;
+  long endBufferOffset;
   ByteVector buffer;
 
   // These variables are used to keep track of a partial match that happens at
@@ -256,6 +168,13 @@ long File::find(const ByteVector &pattern, long fromOffset, const ByteVector &be
   // position using seek() before all returns.
 
   long originalPosition = tell();
+
+  // Determine where to end search.
+
+  if (maxScanBytes > 0)
+    endBufferOffset = bufferOffset + maxScanBytes;
+  else
+    endBufferOffset = 0;
 
   // Start the search at the offset.
 
@@ -320,6 +239,9 @@ long File::find(const ByteVector &pattern, long fromOffset, const ByteVector &be
       beforePreviousPartialMatch = buffer.endsWithPartialMatch(before);
 
     bufferOffset += d->bufferSize;
+
+    if (endBufferOffset && (bufferOffset >= endBufferOffset))
+      break;
   }
 
   // Since we hit the end of the file, reset the status before continuing.
@@ -334,7 +256,7 @@ long File::find(const ByteVector &pattern, long fromOffset, const ByteVector &be
 
 long File::rfind(const ByteVector &pattern, long fromOffset, const ByteVector &before)
 {
-  if(!d->stream || pattern.size() > d->bufferSize)
+  if(!d->fileIO || pattern.size() > d->bufferSize)
       return -1;
 
   // The position in the file that the current buffer starts at.
@@ -356,15 +278,24 @@ long File::rfind(const ByteVector &pattern, long fromOffset, const ByteVector &b
 
   // Start the search at the offset.
 
+  long maxScanBytes = d->maxScanBytes;
   long bufferOffset;
+  long endBufferOffset;
   if(fromOffset == 0) {
     seek(-1 * int(d->bufferSize), End);
     bufferOffset = tell();
   }
   else {
     seek(fromOffset + -1 * int(d->bufferSize), Beginning);
-    bufferOffset = tell();
+    bufferOffset = tell();    
   }
+
+  // Determine where to end search.
+
+  if ((maxScanBytes > 0) && (bufferOffset > maxScanBytes))
+    endBufferOffset = bufferOffset - maxScanBytes;
+  else
+    endBufferOffset = 0;
 
   // See the notes in find() for an explanation of this algorithm.
 
@@ -389,6 +320,9 @@ long File::rfind(const ByteVector &pattern, long fromOffset, const ByteVector &b
 
     bufferOffset -= d->bufferSize;
     seek(bufferOffset);
+
+    if (endBufferOffset && (bufferOffset <= endBufferOffset))
+      break;
   }
 
   // Since we hit the end of the file, reset the status before continuing.
@@ -402,22 +336,42 @@ long File::rfind(const ByteVector &pattern, long fromOffset, const ByteVector &b
 
 void File::insert(const ByteVector &data, ulong start, ulong replace)
 {
-  d->stream->insert(data, start, replace);
+  if(!d->fileIO)
+    return;
+
+  d->fileIO->insert(data, start, replace);
 }
 
 void File::removeBlock(ulong start, ulong length)
 {
-  d->stream->removeBlock(start, length);
+  if(!d->fileIO)
+    return;
+
+  d->fileIO->removeBlock(start, length);
 }
 
 bool File::readOnly() const
 {
-  return d->stream->readOnly();
+  if(!d->fileIO)
+    return true;
+
+  return d->fileIO->readOnly();
+}
+
+bool File::isReadable()
+{
+  if(!d->fileIO)
+    return false;
+
+  return d->fileIO->isReadable();
 }
 
 bool File::isOpen() const
 {
-  return d->stream->isOpen();
+  if(!d->fileIO)
+    return false;
+
+  return d->fileIO->isOpen();
 }
 
 bool File::isValid() const
@@ -425,52 +379,97 @@ bool File::isValid() const
   return isOpen() && d->valid;
 }
 
-void File::seek(long offset, Position p)
+int File::seek(long offset, Position p)
 {
-  d->stream->seek(offset, IOStream::Position(p));
-}
+  if(!d->fileIO) {
+    debug("File::seek() -- trying to seek in a file that isn't opened.");
+    return -1;
+  }
 
-void File::truncate(long length)
-{
-  d->stream->truncate(length);
+  return d->fileIO->seek(offset, p);
 }
 
 void File::clear()
 {
-  d->stream->clear();
+  if(!d->fileIO)
+    return;
+
+  d->fileIO->clear();
 }
 
 long File::tell() const
 {
-  return d->stream->tell();
+  if(!d->fileIO)
+    return -1;
+
+  return d->fileIO->tell();
 }
 
 long File::length()
 {
-  return d->stream->length();
+  if(!d->fileIO)
+    return 0;
+
+  return d->fileIO->length();
 }
 
-bool File::isReadable(const char *file)
+bool File::isWritable()
 {
-  return access(file, R_OK) == 0;
+  if(!d->fileIO)
+    return false;
+
+  return d->fileIO->isWritable();
 }
 
-bool File::isWritable(const char *file)
+FileIO* File::tempFile()
 {
-  return access(file, W_OK) == 0;
+  if (!d->fileIO)
+    return NULL;
+
+  return d->fileIO->tempFile();
+}
+
+bool File::closeTempFile( bool overwrite )
+{
+  if (!d->fileIO)
+    return false;
+  
+  return d->fileIO->closeTempFile( overwrite );
+}
+
+const File::FileIOTypeResolver *File::addFileIOTypeResolver(const File::FileIOTypeResolver *resolver) // static
+{
+  FilePrivate::fileIOTypeResolvers.prepend(resolver);
+  return resolver;
+}
+
+void File::removeFileIOTypeResolver(const File::FileIOTypeResolver *resolver) // static
+{
+  List<const FileIOTypeResolver *>::Iterator it;
+
+  it = FilePrivate::fileIOTypeResolvers.find(resolver);
+  if (it != FilePrivate::fileIOTypeResolvers.end())
+    FilePrivate::fileIOTypeResolvers.erase(it);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 // protected members
 ////////////////////////////////////////////////////////////////////////////////
 
-TagLib::uint File::bufferSize()
-{
-  return FilePrivate::bufferSize;
-}
-
 void File::setValid(bool valid)
 {
   d->valid = valid;
 }
 
+void File::truncate(long length)
+{
+  if(!d->fileIO)
+    return;
+
+  d->fileIO->truncate(length);
+}
+
+TagLib::uint File::bufferSize()
+{
+  return FilePrivate::bufferSize;
+}

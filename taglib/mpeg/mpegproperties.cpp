@@ -15,8 +15,8 @@
  *                                                                         *
  *   You should have received a copy of the GNU Lesser General Public      *
  *   License along with this library; if not, write to the Free Software   *
- *   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA         *
- *   02110-1301  USA                                                       *
+ *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  *
+ *   USA                                                                   *
  *                                                                         *
  *   Alternatively, this file is available under the Mozilla Public        *
  *   License Version 1.1.  You may obtain a copy of the License at         *
@@ -148,6 +148,8 @@ bool MPEG::Properties::isOriginal() const
 
 void MPEG::Properties::read()
 {
+  long maxScanBytes = d->file->getMaxScanBytes();
+
   // Since we've likely just looked for the ID3v1 tag, start at the end of the
   // file where we're least likely to have to have to move the disk head.
 
@@ -162,6 +164,22 @@ void MPEG::Properties::read()
   Header lastHeader(d->file->readBlock(4));
 
   long first = d->file->firstFrameOffset();
+  long endFirst;
+  if (maxScanBytes > 0)
+    endFirst = first + maxScanBytes;
+  else
+    endFirst = 0;
+  while (first >= 0)
+  {
+    d->file->seek(first);
+    Header header(d->file->readBlock(4));
+    if (header.isValid())
+      break;
+    if (endFirst && (first >= endFirst))
+      first = d->file->nextFrameOffset(first + 1);
+    else
+      first = -1;
+  }
 
   if(first < 0) {
     debug("MPEG::Properties::read() -- Could not find a valid first MPEG frame in the stream.");
@@ -171,8 +189,15 @@ void MPEG::Properties::read()
   if(!lastHeader.isValid()) {
 
     long pos = last;
+    long endPos;
 
-    while(pos > first) {
+    if ((maxScanBytes > 0) && (last > maxScanBytes))
+      endPos = last - maxScanBytes;
+    else
+      endPos = 0;
+    if (endPos < first)
+      endPos = first;
+    while(pos > endPos) {
 
       pos = d->file->previousFrameOffset(pos);
 

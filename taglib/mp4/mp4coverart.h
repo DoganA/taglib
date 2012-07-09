@@ -15,8 +15,8 @@
  *                                                                         *
  *   You should have received a copy of the GNU Lesser General Public      *
  *   License along with this library; if not, write to the Free Software   *
- *   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA         *
- *   02110-1301  USA                                                       *
+ *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  *
+ *   USA                                                                   *
  *                                                                         *
  *   Alternatively, this file is available under the Mozilla Public        *
  *   License Version 1.1.  You may obtain a copy of the License at         *
@@ -29,7 +29,6 @@
 #include "tlist.h"
 #include "tbytevector.h"
 #include "taglib_export.h"
-#include "mp4atom.h"
 
 namespace TagLib {
 
@@ -42,10 +41,8 @@ namespace TagLib {
        * This describes the image type.
        */
       enum Format {
-        JPEG = TypeJPEG,
-        PNG  = TypePNG,
-        BMP  = TypeBMP,
-        GIF  = TypeGIF
+        JPEG = 0x0D,
+        PNG  = 0x0E
       };
 
       CoverArt(Format format, const ByteVector &data);

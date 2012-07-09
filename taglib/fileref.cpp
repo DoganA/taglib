@@ -1,10 +1,6 @@
 /***************************************************************************
     copyright            : (C) 2002 - 2008 by Scott Wheeler
     email                : wheeler@kde.org
-    
-    copyright            : (C) 2010 by Alex Novichkov
-    email                : novichko@atnet.ru
-                           (added APE file support)
  ***************************************************************************/
 
 /***************************************************************************
@@ -19,8 +15,8 @@
  *                                                                         *
  *   You should have received a copy of the GNU Lesser General Public      *
  *   License along with this library; if not, write to the Free Software   *
- *   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA         *
- *   02110-1301  USA                                                       *
+ *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  *
+ *   USA                                                                   *
  *                                                                         *
  *   Alternatively, this file is available under the Mozilla Public        *
  *   License Version 1.1.  You may obtain a copy of the License at         *
@@ -48,11 +44,6 @@
 #include "trueaudiofile.h"
 #include "aifffile.h"
 #include "wavfile.h"
-#include "apefile.h"
-#include "modfile.h"
-#include "s3mfile.h"
-#include "itfile.h"
-#include "xmfile.h"
 
 using namespace TagLib;
 
@@ -151,25 +142,22 @@ StringList FileRef::defaultFileExtensions()
   l.append("wv");
   l.append("spx");
   l.append("tta");
+#ifdef TAGLIB_WITH_MP4
   l.append("m4a");
-  l.append("m4r");
   l.append("m4b");
   l.append("m4p");
   l.append("3g2");
   l.append("mp4");
+  l.append("m4v");
+#endif
+#ifdef TAGLIB_WITH_ASF
   l.append("wma");
+  l.append("wmv");
   l.append("asf");
+#endif
   l.append("aif");
   l.append("aiff");
   l.append("wav");
-  l.append("ape");
-  l.append("mod");
-  l.append("module"); // alias for "mod"
-  l.append("nst"); // alias for "mod"
-  l.append("wow"); // alias for "mod"
-  l.append("s3m");
-  l.append("it");
-  l.append("xm");
 
   return l;
 }
@@ -241,7 +229,6 @@ File *FileRef::create(FileName fileName, bool readAudioProperties,
       File *file = new Ogg::FLAC::File(fileName, readAudioProperties, audioPropertiesStyle);
       if (file->isValid())
         return file;
-      delete file;
       return new Ogg::Vorbis::File(fileName, readAudioProperties, audioPropertiesStyle);
     }
     if(ext == "FLAC")
@@ -254,25 +241,20 @@ File *FileRef::create(FileName fileName, bool readAudioProperties,
       return new Ogg::Speex::File(fileName, readAudioProperties, audioPropertiesStyle);
     if(ext == "TTA")
       return new TrueAudio::File(fileName, readAudioProperties, audioPropertiesStyle);
-    if(ext == "M4A" || ext == "M4R" || ext == "M4B" || ext == "M4P" || ext == "MP4" || ext == "3G2")
+#ifdef TAGLIB_WITH_MP4
+    if(ext == "M4A" || ext == "M4B" || ext == "M4P" || ext == "MP4" || ext == "3G2" || ext == "M4V")
       return new MP4::File(fileName, readAudioProperties, audioPropertiesStyle);
-    if(ext == "WMA" || ext == "ASF")
+#endif
+#ifdef TAGLIB_WITH_ASF
+    if(ext == "WMA" || ext == "ASF" || ext == "WMV")
       return new ASF::File(fileName, readAudioProperties, audioPropertiesStyle);
-    if(ext == "AIF" || ext == "AIFF")
+#endif
+    if(ext == "AIF")
       return new RIFF::AIFF::File(fileName, readAudioProperties, audioPropertiesStyle);
     if(ext == "WAV")
       return new RIFF::WAV::File(fileName, readAudioProperties, audioPropertiesStyle);
-    if(ext == "APE")
-      return new APE::File(fileName, readAudioProperties, audioPropertiesStyle);
-    // module, nst and wow are possible but uncommon extensions
-    if(ext == "MOD" || ext == "MODULE" || ext == "NST" || ext == "WOW")
-      return new Mod::File(fileName, readAudioProperties, audioPropertiesStyle);
-    if(ext == "S3M")
-      return new S3M::File(fileName, readAudioProperties, audioPropertiesStyle);
-    if(ext == "IT")
-      return new IT::File(fileName, readAudioProperties, audioPropertiesStyle);
-    if(ext == "XM")
-      return new XM::File(fileName, readAudioProperties, audioPropertiesStyle);
+    if(ext == "AIFF")
+      return new RIFF::AIFF::File(fileName, readAudioProperties, audioPropertiesStyle);
   }
 
   return 0;

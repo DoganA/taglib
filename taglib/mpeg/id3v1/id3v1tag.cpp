@@ -15,8 +15,8 @@
  *                                                                         *
  *   You should have received a copy of the GNU Lesser General Public      *
  *   License along with this library; if not, write to the Free Software   *
- *   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA         *
- *   02110-1301  USA                                                       *
+ *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  *
+ *   USA                                                                   *
  *                                                                         *
  *   Alternatively, this file is available under the Mozilla Public        *
  *   License Version 1.1.  You may obtain a copy of the License at         *
@@ -51,16 +51,11 @@ public:
   static const StringHandler *stringHandler;
 };
 
-static const StringHandler defaultStringHandler;
-const ID3v1::StringHandler *ID3v1::Tag::TagPrivate::stringHandler = &defaultStringHandler;
+const ID3v1::StringHandler *ID3v1::Tag::TagPrivate::stringHandler = new StringHandler;
 
 ////////////////////////////////////////////////////////////////////////////////
 // StringHandler implementation
 ////////////////////////////////////////////////////////////////////////////////
-
-StringHandler::StringHandler()
-{
-}
 
 String ID3v1::StringHandler::parse(const ByteVector &data) const
 {
@@ -69,11 +64,6 @@ String ID3v1::StringHandler::parse(const ByteVector &data) const
 
 ByteVector ID3v1::StringHandler::render(const String &s) const
 {
-  if(!s.isLatin1())
-  {
-    return ByteVector();
-  }
-
   return s.data(String::Latin1);
 }
 
@@ -194,9 +184,7 @@ void ID3v1::Tag::setTrack(uint i)
 
 void ID3v1::Tag::setStringHandler(const StringHandler *handler)
 {
-  if(TagPrivate::stringHandler != &defaultStringHandler)
-    delete TagPrivate::stringHandler;
-
+  delete TagPrivate::stringHandler;
   TagPrivate::stringHandler = handler;
 }
 

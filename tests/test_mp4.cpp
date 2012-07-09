@@ -14,24 +14,21 @@ using namespace TagLib;
 class TestMP4 : public CppUnit::TestFixture
 {
   CPPUNIT_TEST_SUITE(TestMP4);
-  CPPUNIT_TEST(testPropertiesAAC);
-  CPPUNIT_TEST(testPropertiesALAC);
+  CPPUNIT_TEST(testProperties);
   CPPUNIT_TEST(testFreeForm);
-  CPPUNIT_TEST(testCheckValid);
   CPPUNIT_TEST(testUpdateStco);
   CPPUNIT_TEST(testSaveExisingWhenIlstIsLast);
   CPPUNIT_TEST(test64BitAtom);
   CPPUNIT_TEST(testGnre);
   CPPUNIT_TEST(testCovrRead);
   CPPUNIT_TEST(testCovrWrite);
-  CPPUNIT_TEST(testCovrRead2);
   CPPUNIT_TEST_SUITE_END();
 
 public:
 
-  void testPropertiesAAC()
+  void testProperties()
   {
-    MP4::File f(TEST_FILE_PATH_C("has-tags.m4a"));
+    MP4::File f("data/has-tags.m4a");
     CPPUNIT_ASSERT_EQUAL(3, f.audioProperties()->length());
     CPPUNIT_ASSERT_EQUAL(3, f.audioProperties()->bitrate());
     CPPUNIT_ASSERT_EQUAL(2, f.audioProperties()->channels());
@@ -39,28 +36,9 @@ public:
     CPPUNIT_ASSERT_EQUAL(16, ((MP4::Properties *)f.audioProperties())->bitsPerSample());
   }
 
-  void testPropertiesALAC()
-  {
-    MP4::File f(TEST_FILE_PATH_C("empty_alac.m4a"));
-    CPPUNIT_ASSERT_EQUAL(3, f.audioProperties()->length());
-    CPPUNIT_ASSERT_EQUAL(2, f.audioProperties()->bitrate());
-    CPPUNIT_ASSERT_EQUAL(2, f.audioProperties()->channels());
-    CPPUNIT_ASSERT_EQUAL(44100, f.audioProperties()->sampleRate());
-    CPPUNIT_ASSERT_EQUAL(16, ((MP4::Properties *)f.audioProperties())->bitsPerSample());
-  }
-
-  void testCheckValid()
-  {
-    MP4::File f(TEST_FILE_PATH_C("empty.aiff"));
-    CPPUNIT_ASSERT(!f.isValid());
-    MP4::File f2(TEST_FILE_PATH_C("has-tags.m4a"));
-    CPPUNIT_ASSERT(f2.isValid());
-  }
-
   void testUpdateStco()
   {
-    ScopedFileCopy copy("no-tags", ".3g2");
-    string filename = copy.fileName();
+    string filename = copyFile("no-tags", ".3g2");
 
     MP4::File *f = new MP4::File(filename.c_str());
     f->tag()->setArtist(ByteVector(3000, 'x'));
@@ -102,12 +80,13 @@ public:
     }
 
     delete f;
+
+    deleteFile(filename);
   }
 
   void testFreeForm()
   {
-    ScopedFileCopy copy("has-tags", ".m4a");
-    string filename = copy.fileName();
+    string filename = copyFile("has-tags", ".m4a");
 
     MP4::File *f = new MP4::File(filename.c_str());
     CPPUNIT_ASSERT(f->tag()->itemListMap().contains("----:com.apple.iTunes:iTunNORM"));
@@ -120,12 +99,13 @@ public:
     CPPUNIT_ASSERT_EQUAL(String("Bar"), f->tag()->itemListMap()["----:org.kde.TagLib:Foo"].toStringList()[0]);
     f->save();
     delete f;
+
+    deleteFile(filename);
   }
 
   void testSaveExisingWhenIlstIsLast()
   {
-    ScopedFileCopy copy("ilst-is-last", ".m4a");
-    string filename = copy.fileName();
+    string filename = copyFile("ilst-is-last", ".m4a");
 
     MP4::File *f = new MP4::File(filename.c_str());
     CPPUNIT_ASSERT_EQUAL(String("82,164"), f->tag()->itemListMap()["----:com.apple.iTunes:replaygain_track_minmax"].toStringList()[0]);
@@ -138,12 +118,13 @@ public:
     CPPUNIT_ASSERT_EQUAL(String("82,164"), f->tag()->itemListMap()["----:com.apple.iTunes:replaygain_track_minmax"].toStringList()[0]);
     CPPUNIT_ASSERT_EQUAL(String("Pearl Jam"), f->tag()->artist());
     CPPUNIT_ASSERT_EQUAL(String("foo"), f->tag()->comment());
+
+    deleteFile(filename);
   }
 
   void test64BitAtom()
   {
-    ScopedFileCopy copy("64bit", ".mp4");
-    string filename = copy.fileName();
+    string filename = copyFile("64bit", ".mp4");
 
     MP4::File *f = new MP4::File(filename.c_str());
     CPPUNIT_ASSERT_EQUAL(true, f->tag()->itemListMap()["cpil"].toBool());
@@ -163,18 +144,19 @@ public:
     moov = atoms->atoms[0];
     // original size + 'pgap' size + padding
     CPPUNIT_ASSERT_EQUAL(long(77 + 25 + 974), moov->length);
+
+    deleteFile(filename);
   }
 
   void testGnre()
   {
-    MP4::File *f = new MP4::File(TEST_FILE_PATH_C("gnre.m4a"));
+    MP4::File *f = new MP4::File("data/gnre.m4a");
     CPPUNIT_ASSERT_EQUAL(TagLib::String("Ska"), f->tag()->genre());
-    delete f;
   }
 
   void testCovrRead()
   {
-    MP4::File *f = new MP4::File(TEST_FILE_PATH_C("has-tags.m4a"));
+    MP4::File *f = new MP4::File("data/has-tags.m4a");
     CPPUNIT_ASSERT(f->tag()->itemListMap().contains("covr"));
     MP4::CoverArtList l = f->tag()->itemListMap()["covr"].toCoverArtList();
     CPPUNIT_ASSERT_EQUAL(TagLib::uint(2), l.size());
@@ -182,13 +164,11 @@ public:
     CPPUNIT_ASSERT_EQUAL(TagLib::uint(79), l[0].data().size());
     CPPUNIT_ASSERT_EQUAL(MP4::CoverArt::JPEG, l[1].format());
     CPPUNIT_ASSERT_EQUAL(TagLib::uint(287), l[1].data().size());
-    delete f;
   }
 
   void testCovrWrite()
   {
-    ScopedFileCopy copy("has-tags", ".m4a");
-    string filename = copy.fileName();
+    string filename = copyFile("has-tags", ".m4a");
 
     MP4::File *f = new MP4::File(filename.c_str());
     CPPUNIT_ASSERT(f->tag()->itemListMap().contains("covr"));
@@ -209,19 +189,8 @@ public:
     CPPUNIT_ASSERT_EQUAL(MP4::CoverArt::PNG, l[2].format());
     CPPUNIT_ASSERT_EQUAL(TagLib::uint(3), l[2].data().size());
     delete f;
-  }
 
-  void testCovrRead2()
-  {
-    MP4::File *f = new MP4::File(TEST_FILE_PATH_C("covr-junk.m4a"));
-    CPPUNIT_ASSERT(f->tag()->itemListMap().contains("covr"));
-    MP4::CoverArtList l = f->tag()->itemListMap()["covr"].toCoverArtList();
-    CPPUNIT_ASSERT_EQUAL(TagLib::uint(2), l.size());
-    CPPUNIT_ASSERT_EQUAL(MP4::CoverArt::PNG, l[0].format());
-    CPPUNIT_ASSERT_EQUAL(TagLib::uint(79), l[0].data().size());
-    CPPUNIT_ASSERT_EQUAL(MP4::CoverArt::JPEG, l[1].format());
-    CPPUNIT_ASSERT_EQUAL(TagLib::uint(287), l[1].data().size());
-    delete f;
+    deleteFile(filename);
   }
 
 };

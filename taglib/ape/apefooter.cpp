@@ -16,8 +16,8 @@
  *                                                                         *
  *   You should have received a copy of the GNU Lesser General Public      *
  *   License along with this library; if not, write to the Free Software   *
- *   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA         *
- *   02110-1301  USA                                                       *
+ *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  *
+ *   USA                                                                   *
  *                                                                         *
  *   Alternatively, this file is available under the Mozilla Public        *
  *   License Version 1.1.  You may obtain a copy of the License at         *
@@ -35,7 +35,7 @@
 using namespace TagLib;
 using namespace APE;
 
-class APE::Footer::FooterPrivate
+class Footer::FooterPrivate
 {
 public:
   FooterPrivate() : version(0),
@@ -64,12 +64,12 @@ public:
 // static members
 ////////////////////////////////////////////////////////////////////////////////
 
-TagLib::uint APE::Footer::size()
+TagLib::uint Footer::size()
 {
   return FooterPrivate::size;
 }
 
-ByteVector APE::Footer::fileIdentifier()
+ByteVector Footer::fileIdentifier()
 {
   return ByteVector::fromCString("APETAGEX");
 }
@@ -78,63 +78,63 @@ ByteVector APE::Footer::fileIdentifier()
 // public members
 ////////////////////////////////////////////////////////////////////////////////
 
-APE::Footer::Footer()
+Footer::Footer()
 {
   d = new FooterPrivate;
 }
 
-APE::Footer::Footer(const ByteVector &data)
+Footer::Footer(const ByteVector &data)
 {
   d = new FooterPrivate;
   parse(data);
 }
 
-APE::Footer::~Footer()
+Footer::~Footer()
 {
   delete d;
 }
 
-TagLib::uint APE::Footer::version() const
+TagLib::uint Footer::version() const
 {
   return d->version;
 }
 
-bool APE::Footer::headerPresent() const
+bool Footer::headerPresent() const
 {
   return d->headerPresent;
 }
 
-bool APE::Footer::footerPresent() const
+bool Footer::footerPresent() const
 {
   return d->footerPresent;
 }
 
-bool APE::Footer::isHeader() const
+bool Footer::isHeader() const
 {
   return d->isHeader;
 }
 
-void APE::Footer::setHeaderPresent(bool b) const
+void Footer::setHeaderPresent(bool b) const
 {
   d->headerPresent = b;
 }
 
-TagLib::uint APE::Footer::itemCount() const
+TagLib::uint Footer::itemCount() const
 {
   return d->itemCount;
 }
 
-void APE::Footer::setItemCount(uint s)
+void Footer::setItemCount(uint s)
 {
   d->itemCount = s;
 }
 
-TagLib::uint APE::Footer::tagSize() const
+TagLib::uint Footer::tagSize() const
 {
   return d->tagSize;
 }
 
-TagLib::uint APE::Footer::completeTagSize() const
+TagLib::uint Footer::completeTagSize() const
 {
   if(d->headerPresent)
     return d->tagSize + d->size;
@@ -142,22 +142,22 @@ TagLib::uint APE::Footer::completeTagSize() const
     return d->tagSize;
 }
 
-void APE::Footer::setTagSize(uint s)
+void Footer::setTagSize(uint s)
 {
   d->tagSize = s;
 }
 
-void APE::Footer::setData(const ByteVector &data)
+void Footer::setData(const ByteVector &data)
 {
   parse(data);
 }
 
-ByteVector APE::Footer::renderFooter() const
+ByteVector Footer::renderFooter() const
 {
     return render(false);
 }
 
-ByteVector APE::Footer::renderHeader() const
+ByteVector Footer::renderHeader() const
 {
     if (!d->headerPresent) return ByteVector();
 
@@ -168,7 +168,7 @@ ByteVector APE::Footer::renderHeader() const
 // protected members
 ////////////////////////////////////////////////////////////////////////////////
 
-void APE::Footer::parse(const ByteVector &data)
+void Footer::parse(const ByteVector &data)
 {
   if(data.size() < size())
     return;
@@ -189,7 +189,7 @@ void APE::Footer::parse(const ByteVector &data)
 
   // Read the flags
 
-  std::bitset<32> flags(TAGLIB_CONSTRUCT_BITSET(data.mid(20, 4).toUInt(false)));
+  std::bitset<32> flags(data.mid(20, 4).toUInt(false));
 
   d->headerPresent = flags[31];
   d->footerPresent = !flags[30];
@@ -197,7 +197,7 @@ void APE::Footer::parse(const ByteVector &data)
 
 }
 
-ByteVector APE::Footer::render(bool isHeader) const
+ByteVector Footer::render(bool isHeader) const
 {
   ByteVector v;
 

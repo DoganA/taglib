@@ -15,8 +15,8 @@
  *                                                                         *
  *   You should have received a copy of the GNU Lesser General Public      *
  *   License along with this library; if not, write to the Free Software   *
- *   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA         *
- *   02110-1301  USA                                                       *
+ *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  *
+ *   USA                                                                   *
  *                                                                         *
  *   Alternatively, this file is available under the Mozilla Public        *
  *   License Version 1.1.  You may obtain a copy of the License at         *
@@ -26,7 +26,6 @@
 #include "tstring.h"
 #include "unicode.h"
 #include "tdebug.h"
-#include "tstringlist.h"
 
 #include <iostream>
 
@@ -53,17 +52,20 @@ public:
   StringPrivate(const wstring &s) :
     RefCounter(),
     data(s),
-    CString(0) {}
+    CString(0),
+    trustCharset(true) {}
 
   StringPrivate() :
     RefCounter(),
-    CString(0) {}
+    CString(0),
+    trustCharset(true) {}
 
   ~StringPrivate() {
     delete [] CString;
   }
 
   wstring data;
+  bool trustCharset;
 
   /*!
    * This is only used to hold the a pointer to the most recent value of
@@ -305,26 +307,6 @@ int String::rfind(const String &s, int offset) const
     return -1;
 }
 
-StringList String::split(const String &separator) const
-{
-  StringList list;
-  for(int index = 0;;)
-  {
-    int sep = find(separator, index);
-    if(sep < 0)
-    {
-      list.append(substr(index, size() - index));
-      break;
-    }
-    else
-    {
-      list.append(substr(index, sep - index));
-      index = sep + separator.size();
-    }
-  }
-  return list;
-}
-
 bool String::startsWith(const String &s) const
 {
   if(s.length() > length())
@@ -340,6 +322,7 @@ String String::substr(uint position, uint n) const
 
   String s;
   s.d->data = d->data.substr(position, n);
+  s.d->trustCharset = d->trustCharset;
   return s;
 }
 
@@ -347,12 +330,14 @@ String &String::append(const String &s)
 {
   detach();
   d->data += s.d->data;
+  d->trustCharset &= s.d->trustCharset;
   return *this;
 }
 
 String String::upper() const
 {
   String s;
+  s.d->trustCharset = d->trustCharset;
 
   static int shift = 'A' - 'a';
 
@@ -395,7 +380,7 @@ ByteVector String::data(Type t) const
   case Latin1:
   {
     for(wstring::const_iterator it = d->data.begin(); it != d->data.end(); it++)
-      v.append(char(*it));
+      v.append(*it < 256 ? char(*it) : '?');
     break;
   }
   case UTF8:
@@ -453,26 +438,16 @@ ByteVector String::data(Type t) const
 
 int String::toInt() const
 {
-  return toInt(0);
-}
-
-int String::toInt(bool *ok) const
-{
   int value = 0;
 
-  uint size = d->data.size();
-  bool negative = size > 0 && d->data[0] == '-';
-  uint start = negative ? 1 : 0;
-  uint i = start;
+  bool negative = d->data[0] == '-';
+  uint i = negative ? 1 : 0;
 
-  for(; i < size && d->data[i] >= '0' && d->data[i] <= '9'; i++)
+  for(; i < d->data.size() && d->data[i] >= '0' && d->data[i] <= '9'; i++)
     value = value * 10 + (d->data[i] - '0');
 
   if(negative)
     value = value * -1;
-
-  if(ok)
-    *ok = (size > start && i == size);
 
   return value;
 }
@@ -500,7 +475,7 @@ String String::stripWhiteSpace() const
   } while(*end == '\t' || *end == '\n' ||
           *end == '\f' || *end == '\r' || *end == ' ');
 
-  return String(wstring(begin, end + 1));
+  return String(wstring(begin, end + 1), d->trustCharset ? UTF16BE : Latin1);
 }
 
 bool String::isLatin1() const
@@ -519,6 +494,26 @@ bool String::isAscii() const
       return false;
   }
   return true;
+}
+
+bool String::isInt() const
+{
+  // An empty string is not an int.
+  if (d->data.size() == 0) {
+    return false;
+  }
+  
+  for(wstring::const_iterator it = d->data.begin(); it != d->data.end(); ++it) {
+    if (*it < '0' || *it > '9')
+      return false;
+  }
+
+  return true;
+}
+
+bool String::shouldGuessCharacterSet() const
+{
+  return !d->trustCharset;
 }
 
 String String::number(int n) // static
@@ -567,16 +562,12 @@ bool String::operator==(const String &s) const
   return d == s.d || d->data == s.d->data;
 }
 
-bool String::operator!=(const String &s) const
-{
-  return !operator==(s);
-}
-
 String &String::operator+=(const String &s)
 {
   detach();
 
   d->data += s.d->data;
+  d->trustCharset &= s.d->trustCharset;
   return *this;
 }
 
@@ -594,6 +585,7 @@ String &String::operator+=(const char *s)
 
   for(int i = 0; s[i] != 0; i++)
     d->data += uchar(s[i]);
+  d->trustCharset = false;
   return *this;
 }
 
@@ -610,6 +602,7 @@ String &String::operator+=(char c)
   detach();
 
   d->data += uchar(c);
+  d->trustCharset = false;
   return *this;
 }
 
@@ -639,6 +632,7 @@ String &String::operator=(const std::string &s)
     *targetIt = uchar(*it);
     ++targetIt;
   }
+  d->trustCharset = false;
 
   return *this;
 }
@@ -665,6 +659,7 @@ String &String::operator=(char c)
     delete d;
   d = new StringPrivate;
   d->data += uchar(c);
+  d->trustCharset = false;
   return *this;
 }
 
@@ -673,6 +668,7 @@ String &String::operator=(wchar_t c)
   if(d->deref())
     delete d;
   d = new StringPrivate;
+  d->trustCharset = true;
   d->data += c;
   return *this;
 }
@@ -692,6 +688,8 @@ String &String::operator=(const char *s)
     *targetIt = uchar(s[i]);
     ++targetIt;
   }
+  
+  d->trustCharset = false;
 
   return *this;
 }
@@ -716,6 +714,7 @@ String &String::operator=(const ByteVector &v)
   // If we hit a null in the ByteVector, shrink the string again.
 
   d->data.resize(i);
+  d->trustCharset = false;
 
   return *this;
 }
@@ -743,6 +742,7 @@ void String::detach()
 
 void String::prepare(Type t)
 {
+  d->trustCharset = (t != Latin1);
   switch(t) {
   case UTF16:
   {

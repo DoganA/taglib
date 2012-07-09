@@ -15,8 +15,8 @@
  *                                                                         *
  *   You should have received a copy of the GNU Lesser General Public      *
  *   License along with this library; if not, write to the Free Software   *
- *   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA         *
- *   02110-1301  USA                                                       *
+ *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  *
+ *   USA                                                                   *
  *                                                                         *
  *   Alternatively, this file is available under the Mozilla Public        *
  *   License Version 1.1.  You may obtain a copy of the License at         *
@@ -79,7 +79,7 @@ namespace TagLib {
     /*!
      * Concatenate the list of strings into one string separated by \a separator.
      */
-    String toString(const String &separator = " ") const;
+    String toString(const String &separator = String(" ", String::UTF8)) const;
 
     /*!
      * Appends \a s to the end of the list and returns a reference to the

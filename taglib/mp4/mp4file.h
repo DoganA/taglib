@@ -15,8 +15,8 @@
  *                                                                         *
  *   You should have received a copy of the GNU Lesser General Public      *
  *   License along with this library; if not, write to the Free Software   *
- *   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA         *
- *   02110-1301  USA                                                       *
+ *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  *
+ *   USA                                                                   *
  *                                                                         *
  *   Alternatively, this file is available under the Mozilla Public        *
  *   License Version 1.1.  You may obtain a copy of the License at         *
@@ -49,15 +49,11 @@ namespace TagLib {
     {
     public:
       /*!
-       * Contructs a MP4 file from \a file.  If \a readProperties is true the
-       * file's audio properties will also be read using \a propertiesStyle.  If
-       * false, \a propertiesStyle is ignored.
-       *
-       * \note In the current implementation, both \a readProperties and
-       * \a propertiesStyle are ignored.
+       * Contructs a MP4 file object without reading a file.  Allows object
+       * fields to be set up before reading.
        */
-      File(FileName file, bool readProperties = true, Properties::ReadStyle audioPropertiesStyle = Properties::Average);
-
+      File();
+      
       /*!
        * Contructs a MP4 file from \a file.  If \a readProperties is true the
        * file's audio properties will also be read using \a propertiesStyle.  If
@@ -66,7 +62,7 @@ namespace TagLib {
        * \note In the current implementation, both \a readProperties and
        * \a propertiesStyle are ignored.
        */
-      File(IOStream *stream, bool readProperties = true, Properties::ReadStyle audioPropertiesStyle = Properties::Average);
+      File(FileName file, bool readProperties = true, Properties::ReadStyle audioPropertiesStyle = Properties::Average);
 
       /*!
        * Destroys this instance of the File.
@@ -97,9 +93,10 @@ namespace TagLib {
        */
       bool save();
 
-    private:
+      void read(bool readProperties = true,
+                Properties::ReadStyle propertiesStyle = Properties::Average);
 
-      void read(bool readProperties, Properties::ReadStyle audioPropertiesStyle);
+    private:
       bool checkValid(const MP4::AtomList &list);
 
       class FilePrivate;

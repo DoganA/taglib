@@ -15,8 +15,8 @@
  *                                                                         *
  *   You should have received a copy of the GNU Lesser General Public      *
  *   License along with this library; if not, write to the Free Software   *
- *   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA         *
- *   02110-1301  USA                                                       *
+ *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  *
+ *   USA                                                                   *
  *                                                                         *
  *   Alternatively, this file is available under the Mozilla Public        *
  *   License Version 1.1.  You may obtain a copy of the License at         *
@@ -43,9 +43,7 @@ public:
     length(0),
     bitrate(0),
     sampleRate(0),
-    channels(0),
-    totalFrames(0),
-    sampleFrames(0) {}
+    channels(0) {}
 
   ByteVector data;
   long streamLength;
@@ -55,8 +53,6 @@ public:
   int bitrate;
   int sampleRate;
   int channels;
-  uint totalFrames;
-  uint sampleFrames;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -99,16 +95,6 @@ int MPC::Properties::mpcVersion() const
   return d->version;
 }
 
-uint MPC::Properties::totalFrames() const
-{
-  return d->totalFrames;
-}
-
-uint MPC::Properties::sampleFrames() const
-{
-  return d->sampleFrames;
-}
-
 ////////////////////////////////////////////////////////////////////////////////
 // private members
 ////////////////////////////////////////////////////////////////////////////////
@@ -122,21 +108,14 @@ void MPC::Properties::read()
 
   d->version = d->data[3] & 15;
 
-  if(d->version >= 7) {
-    d->totalFrames = d->data.mid(4, 4).toUInt(false);
+  unsigned int frames;
 
-    std::bitset<32> flags(TAGLIB_CONSTRUCT_BITSET(d->data.mid(8, 4).toUInt(false)));
+  if(d->version >= 7) {
+    frames = d->data.mid(4, 4).toUInt(false);
+
+    std::bitset<32> flags = d->data.mid(8, 4).toUInt(false);
     d->sampleRate = sftable[flags[17] * 2 + flags[16]];
     d->channels = 2;
-
-    uint gapless = d->data.mid(5, 4).toUInt(false);
-    bool trueGapless = (gapless >> 31) & 0x0001;
-    if(trueGapless) {
-      uint lastFrameSamples = (gapless >> 20) & 0x07FF;
-      d->sampleFrames = d->totalFrames * 1152 - lastFrameSamples;
-    }
-    else
-      d->sampleFrames = d->totalFrames * 1152 - 576;
   }
   else {
     uint headerData = d->data.mid(0, 4).toUInt(false);
@@ -147,14 +126,14 @@ void MPC::Properties::read()
     d->channels = 2;
 
     if(d->version >= 5)
-      d->totalFrames = d->data.mid(4, 4).toUInt(false);
+      frames = d->data.mid(4, 4).toUInt(false);
     else
-      d->totalFrames = d->data.mid(6, 2).toUInt(false);
-
-    d->sampleFrames = d->totalFrames * 1152 - 576;
+      frames = d->data.mid(6, 2).toUInt(false);
   }
 
-  d->length = d->sampleRate > 0 ? (d->sampleFrames + (d->sampleRate / 2)) / d->sampleRate : 0;
+  uint samples = frames * 1152 - 576;
+
+  d->length = d->sampleRate > 0 ? (samples + (d->sampleRate / 2)) / d->sampleRate : 0;
 
   if(!d->bitrate)
     d->bitrate = d->length > 0 ? ((d->streamLength * 8L) / d->length) / 1000 : 0;

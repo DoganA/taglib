@@ -15,8 +15,8 @@
  *                                                                         *
  *   You should have received a copy of the GNU Lesser General Public      *
  *   License along with this library; if not, write to the Free Software   *
- *   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA         *
- *   02110-1301  USA                                                       *
+ *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  *
+ *   USA                                                                   *
  *                                                                         *
  *   Alternatively, this file is available under the Mozilla Public        *
  *   License Version 1.1.  You may obtain a copy of the License at         *
@@ -26,6 +26,8 @@
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
+
+#ifdef WITH_MP4
 
 #include <tdebug.h>
 #include <tstring.h>
@@ -38,14 +40,13 @@ using namespace TagLib;
 class MP4::Properties::PropertiesPrivate
 {
 public:
-  PropertiesPrivate() : length(0), bitrate(0), sampleRate(0), channels(0), bitsPerSample(0), encrypted(false) {}
+  PropertiesPrivate() : length(0), bitrate(0), sampleRate(0), channels(0), bitsPerSample(0) {}
 
   int length;
   int bitrate;
   int sampleRate;
   int channels;
   int bitsPerSample;
-  bool encrypted;
 };
 
 MP4::Properties::Properties(File *file, MP4::Atoms *atoms, ReadStyle style)
@@ -90,24 +91,15 @@ MP4::Properties::Properties(File *file, MP4::Atoms *atoms, ReadStyle style)
 
   file->seek(mdhd->offset);
   data = file->readBlock(mdhd->length);
-  uint version = data[8];
-  if(version == 1) {
-    if (data.size() < 36 + 8) {
-      debug("MP4: Atom 'trak.mdia.mdhd' is smaller than expected");
-      return;
-    }
-    long long unit = data.mid(28, 8).toLongLong();
-    long long length = data.mid(36, 8).toLongLong();
-    d->length = unit ? int(length / unit) : 0;
-  }
-  else {
-    if (data.size() < 24 + 4) {
-      debug("MP4: Atom 'trak.mdia.mdhd' is smaller than expected");
-      return;
-    }
+  if(data[8] == 0) {
     unsigned int unit = data.mid(20, 4).toUInt();
     unsigned int length = data.mid(24, 4).toUInt();
-    d->length = unit ? length / unit : 0;
+    d->length = length / unit;
+  }
+  else {
+    long long unit = data.mid(28, 8).toLongLong();
+    long long length = data.mid(36, 8).toLongLong();
+    d->length = int(length / unit);
   }
 
   MP4::Atom *atom = trak->find("mdia", "minf", "stbl", "stsd");
@@ -136,19 +128,6 @@ MP4::Properties::Properties(File *file, MP4::Atoms *atoms, ReadStyle style)
         d->bitrate = (data.mid(pos, 4).toUInt() + 500) / 1000;
       }
     }
-  }
-  else if (data.mid(20, 4) == "alac") {
-    if (atom->length == 88 && data.mid(56, 4) == "alac") {
-      d->bitsPerSample = data.at(69);
-      d->channels = data.at(73);
-      d->bitrate = data.mid(80, 4).toUInt() / 1000;
-      d->sampleRate = data.mid(84, 4).toUInt();
-    }
-  }
-
-  MP4::Atom *drms = atom->find("drms");
-  if(drms) {
-    d->encrypted = true;
   }
 }
 
@@ -187,9 +166,4 @@ MP4::Properties::bitsPerSample() const
   return d->bitsPerSample;
 }
 
-bool
-MP4::Properties::isEncrypted() const
-{
-  return d->encrypted;
-}
-
+#endif

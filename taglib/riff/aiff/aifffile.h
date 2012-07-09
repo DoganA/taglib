@@ -15,8 +15,8 @@
  *                                                                         *
  *   You should have received a copy of the GNU Lesser General Public      *
  *   License along with this library; if not, write to the Free Software   *
- *   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA         *
- *   02110-1301  USA                                                       *
+ *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  *
+ *   USA                                                                   *
  *                                                                         *
  *   Alternatively, this file is available under the Mozilla Public        *
  *   License Version 1.1.  You may obtain a copy of the License at         *
@@ -66,14 +66,6 @@ namespace TagLib {
              Properties::ReadStyle propertiesStyle = Properties::Average);
 
         /*!
-         * Contructs an AIFF file from \a file.  If \a readProperties is true the
-         * file's audio properties will also be read using \a propertiesStyle.  If
-         * false, \a propertiesStyle is ignored.
-         */
-        File(IOStream *stream, bool readProperties = true,
-             Properties::ReadStyle propertiesStyle = Properties::Average);
-
-        /*!
          * Destroys this instance of the File.
          */
         virtual ~File();
@@ -82,18 +74,6 @@ namespace TagLib {
          * Returns the Tag for this file.
          */
         virtual ID3v2::Tag *tag() const;
-
-        /*!
-         * Implements the unified property interface -- export function.
-         * This method forwards to ID3v2::Tag::properties().
-         */
-        PropertyMap properties() const;
-
-        /*!
-         * Implements the unified property interface -- import function.
-         * This method forwards to ID3v2::Tag::setProperties().
-         */
-        PropertyMap setProperties(const PropertyMap &);
 
         /*!
          * Returns the AIFF::Properties for this file.  If no audio properties
