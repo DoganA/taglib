@@ -1,6 +1,6 @@
 project(taglib)
 
-cmake_minimum_required(VERSION 2.6.0 FATAL_ERROR)
+cmake_minimum_required(VERSION 2.4.7 FATAL_ERROR)
 
 OPTION(ENABLE_STATIC "Make static version of libtag"  OFF)
 
@@ -34,9 +34,6 @@ if(MSVC)
     add_definitions(/D_CRT_SECURE_NO_DEPRECATE /D_CRT_NONSTDC_NO_DEPRECATE /Zc:wchar_t-)
   endif (MSVC_VERSION GREATER 1399)
 endif(MSVC)
-if (WIN32)
-  set(CMAKE_DEBUG_POSTFIX "d")
-endif (WIN32)
 
 SET(TAGLIB_LIB_MAJOR_VERSION "1")
 SET(TAGLIB_LIB_MINOR_VERSION "6")

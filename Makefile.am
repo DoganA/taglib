@@ -21,9 +21,9 @@ pkgconfig_DATA = taglib.pc
 package-messages:
 	$(MAKE) -f admin/Makefile.common package-messages
 
-dist-hook:
-	cd $(top_distdir) && perl admin/am_edit -padmin
-	cd $(top_distdir) && $(MAKE) -f admin/Makefile.common subdirs
+#dist-hook:
+#	cd $(top_distdir) && perl admin/am_edit -padmin
+#	cd $(top_distdir) && $(MAKE) -f admin/Makefile.common subdirs
 
 examples: examples-all
 

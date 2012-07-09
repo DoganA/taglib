@@ -283,6 +283,12 @@ namespace TagLib {
     bool isNull() const;
 
     /*!
+     * Returns true if the string only uses characters from '0'..'9'.
+     * Returns false for an empty string.
+     */
+    bool isInt() const;
+
+    /*!
      * Returns a ByteVector containing the string's data.  If \a t is Latin1 or
      * UTF8, this will return a vector of 8 bit characters, otherwise it will use
      * 16 bit characters.
@@ -308,6 +314,11 @@ namespace TagLib {
      * Returns true if the file only uses characters required by (7-bit) ASCII.
      */
     bool isAscii() const;
+    
+    /*!
+     * Returns true if the Unicode string can't be trusted to really be correct
+     */
+    bool shouldGuessCharacterSet() const;
 
     /*!
      * Converts the base-10 integer \a n to a string.
