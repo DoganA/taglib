@@ -177,10 +177,10 @@ String ID3v2::Tag::genre() const
     if((*it).isEmpty())
       continue;
 
-    if((*it).isInt()) {
-      int number = (*it).toInt();
-      if(number >= 0 && number <= 255)
-        *it = ID3v1::genre(number);
+    bool ok;
+    int number = (*it).toInt(&ok);
+    if(ok && number >= 0 && number <= 255) {
+      *it = ID3v1::genre(number);
     }
 
     if(std::find(genres.begin(), genres.end(), *it) == genres.end())

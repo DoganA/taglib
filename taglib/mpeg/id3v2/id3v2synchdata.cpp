@@ -1,4 +1,4 @@
-/***************************************************************************
+-/***************************************************************************
     copyright            : (C) 2002 - 2008 by Scott Wheeler
     email                : wheeler@kde.org
  ***************************************************************************/
@@ -45,13 +45,11 @@ TagLib::uint SynchData::toUInt(const ByteVector &data)
     sum |= (data[i] & 0x7f) << ((last - i) * 7);
   }
 
-  if (notsyncsafe) {
-    /* Invalid data; assume this was created by some buggy software that just
-     * put normal integers here rather than syncsafe ones, and try it that 
-     * way... */
-    sum = 0;
-    for(int i = 0; i <= last; i++)
-      sum |= ((unsigned char)data[i]) << ((last - i) * 8);
+  if(notSynchSafe) {
+    // Invalid data; assume this was created by some buggy software that just
+    // put normal integers here rather than syncsafe ones, and try it that
+    // way.
+    sum = (data.size() > 4) ? data.mid(0, 4).toUInt() : data.toUInt();
   }
 
   return sum;

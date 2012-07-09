@@ -445,14 +445,11 @@ void FrameFactory::updateGenre(TextIdentificationFrame *frame) const
     if(s.startsWith("(") && end > 0) {
       // "(12)Genre"
       String text = s.substr(end + 1);
-      String numericText = s.substr(1, end - 1);
-      if (numericText.isInt()) {        
-        int number = numericText.toInt();
-        if (number >= 0 && number <= 255 && !(ID3v1::genre(number) == text)) {
-          newfields.append(numericText);
-        }
-      }
-      if (!text.isEmpty())
+      bool ok;
+      int number = s.substr(1, end - 1).toInt(&ok);
+      if(ok && number >= 0 && number <= 255 && !(ID3v1::genre(number) == text))
+        newfields.append(s.substr(1, end - 1));
+      if(!text.isEmpty())
         newfields.append(text);
     }
     else {
